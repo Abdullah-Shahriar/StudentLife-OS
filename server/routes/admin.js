@@ -3,14 +3,16 @@ const router = express.Router();
 const fs = require('fs-extra');
 const path = require('path');
 
-const ADMIN_CODE = 'host2026';
+const ADMIN_EMAIL    = 'host@shahriar.com';
+const ADMIN_PASSWORD = '2803';
 const usersFile = path.join(__dirname, '../data/users.json');
 const adminLogsFile = path.join(__dirname, '../data/admin_logs.json');
 
 function verifyAdmin(req, res, next) {
-  const code = req.headers['x-admin-code'] || req.query.code;
-  if (code !== ADMIN_CODE) return res.status(403).json({ error: 'Forbidden – invalid admin code' });
-  next();
+  const email    = req.headers['x-admin-email']    || req.query.email;
+  const password = req.headers['x-admin-password'] || req.query.password;
+  if (email === ADMIN_EMAIL && password === ADMIN_PASSWORD) { next(); return; }
+  return res.status(403).json({ error: 'Forbidden – invalid credentials' });
 }
 
 // GET all users list

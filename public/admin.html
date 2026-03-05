@@ -52,10 +52,17 @@
       </div>
       <div class="auth-form">
         <div class="form-group">
-          <label>Admin Secret Code</label>
+          <label>Admin Email</label>
+          <div class="input-wrap">
+            <span class="input-icon">✉️</span>
+            <input type="email" id="adminEmailInput" placeholder="host@shahriar.com" onkeydown="if(event.key==='Enter')verifyAdmin()" autocomplete="email" />
+          </div>
+        </div>
+        <div class="form-group">
+          <label>Password</label>
           <div class="input-wrap">
             <span class="input-icon">🔑</span>
-            <input type="password" id="adminCodeInput" placeholder="Enter secret code" onkeydown="if(event.key==='Enter')verifyAdmin()" />
+            <input type="password" id="adminCodeInput" placeholder="Enter password" onkeydown="if(event.key==='Enter')verifyAdmin()" />
             <button type="button" class="toggle-pw" onclick="togglePw('adminCodeInput',this)">👁</button>
           </div>
         </div>
@@ -150,7 +157,8 @@
 <script>
 /* ── ADMIN PANEL JS ── */
 const ADMIN_CODE = '';
-let adminCodeVerified = '';
+let adminCodeVerified  = '';
+let adminEmailVerified = '';
 let allUsersData = [];
 let allLogsData = {};
 let filteredUsers = [];
@@ -182,14 +190,18 @@ function toast(msg, type = 'info') {
 }
 
 async function verifyAdmin() {
-  const code = document.getElementById('adminCodeInput').value;
-  if (!code) { showError('adminLoginError', 'Enter the admin code'); return; }
+  const email = (document.getElementById('adminEmailInput')?.value || '').trim();
+  const code  = (document.getElementById('adminCodeInput')?.value  || '').trim();
+  if (!email || !code) { showError('adminLoginError', 'Enter both email and password'); return; }
 
   try {
-    const res = await fetch('/api/admin/summary', { headers: { 'x-admin-code': code } });
-    if (!res.ok) throw new Error('Invalid secret code');
+    const res = await fetch('/api/admin/summary', {
+      headers: { 'x-admin-email': email, 'x-admin-password': code }
+    });
+    if (!res.ok) throw new Error('Invalid credentials');
     const data = await res.json();
-    adminCodeVerified = code;
+    adminEmailVerified = email;
+    adminCodeVerified  = code;
     document.getElementById('adminLoginPage').style.display = 'none';
     document.getElementById('adminPanel').style.display = 'block';
     allUsersData = data;
@@ -201,17 +213,21 @@ async function verifyAdmin() {
 }
 
 function adminLogout() {
-  adminCodeVerified = '';
+  adminCodeVerified  = '';
+  adminEmailVerified = '';
   document.getElementById('adminLoginPage').style.display = 'block';
   document.getElementById('adminPanel').style.display = 'none';
-  document.getElementById('adminCodeInput').value = '';
+  document.getElementById('adminCodeInput').value  = '';
+  const emailEl = document.getElementById('adminEmailInput');
+  if (emailEl) emailEl.value = '';
 }
 
 async function loadAdminData() {
   try {
+    const headers = { 'x-admin-email': adminEmailVerified, 'x-admin-password': adminCodeVerified };
     const [summaryRes, logsRes] = await Promise.all([
-      fetch('/api/admin/summary', { headers: { 'x-admin-code': adminCodeVerified } }),
-      fetch('/api/admin/logs', { headers: { 'x-admin-code': adminCodeVerified } })
+      fetch('/api/admin/summary', { headers }),
+      fetch('/api/admin/logs',    { headers })
     ]);
     allUsersData = await summaryRes.json();
     filteredUsers = [...allUsersData];

@@ -10,17 +10,66 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 </head>
 <body class="auth-page">
+  <!-- Three.js galaxy background -->
   <canvas id="bg-canvas"></canvas>
+  <!-- FX canvas: cursor particles + orbital nodes -->
+  <canvas id="fx-canvas"></canvas>
 
-  <div class="auth-container">
-    <div class="auth-card glass-card">
+  <!-- ── AI ASSISTANT ORB ── -->
+  <div class="ai-orb" id="ai-orb">
+    <div class="ai-ring r1"></div>
+    <div class="ai-ring r2"></div>
+    <div class="ai-ring r3"></div>
+    <div class="ai-core">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
+        <circle cx="12" cy="8" r="3.5" stroke="#a5b4fc" stroke-width="1.5"/>
+        <path d="M12 12v4m-3 2h6" stroke="#a5b4fc" stroke-width="1.5" stroke-linecap="round"/>
+        <path d="M5 20c0-3.314 3.134-6 7-6s7 2.686 7 6" stroke="#818cf8" stroke-width="1.5" stroke-linecap="round"/>
+      </svg>
+    </div>
+    <div class="ai-tooltip">Need help logging in?</div>
+  </div>
+
+  <!-- ── SYSTEM RIBBON ── -->
+  <div class="sys-ribbon">
+    <span class="ribbon-led"></span>
+    <span>StudentLife OS</span>
+    <span class="ribbon-sep">·</span>
+    <span>v2.1 Spring 2026</span>
+    <span class="ribbon-sep">·</span>
+    <span class="ribbon-secure">⚡ Encrypted Session</span>
+  </div>
+
+  <!-- ── MAIN CONTAINER ── -->
+  <div class="auth-container" id="auth-container">
+
+    <!-- orbit tracks (purely decorative) drawn around the card -->
+    <div class="orbit-wrap" id="orbit-wrap" aria-hidden="true">
+      <div class="orbit-track ot-1"></div>
+      <div class="orbit-track ot-2"></div>
+    </div>
+
+    <!-- ══ FUTURISTIC LOGIN CARD ══ -->
+    <div class="futura-card" id="auth-card">
+      <!-- HUD corner brackets -->
+      <span class="hud hud-tl"></span>
+      <span class="hud hud-tr"></span>
+      <span class="hud hud-bl"></span>
+      <span class="hud hud-br"></span>
+      <!-- Scan line sweep -->
+      <div class="card-scanline"></div>
+      <!-- Ambient glow blob -->
+      <div class="card-glow-blob"></div>
+
+      <!-- Brand -->
       <div class="brand">
         <div class="brand-icon">
-          <svg viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <circle cx="20" cy="20" r="20" fill="url(#grad1)"/>
-            <path d="M12 20L17 25L28 14" stroke="white" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+          <svg viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <circle cx="24" cy="24" r="24" fill="url(#lgBrand)"/>
+            <path d="M14 24L21 31L34 17" stroke="white" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"/>
+            <circle cx="24" cy="24" r="19" stroke="rgba(255,255,255,0.18)" stroke-width="0.8"/>
             <defs>
-              <linearGradient id="grad1" x1="0" y1="0" x2="40" y2="40">
+              <linearGradient id="lgBrand" x1="0" y1="0" x2="48" y2="48">
                 <stop offset="0%" stop-color="#6366f1"/>
                 <stop offset="100%" stop-color="#06b6d4"/>
               </linearGradient>
@@ -28,48 +77,75 @@
           </svg>
         </div>
         <div class="brand-text">
-          <h1>StudentLife <span class="highlight">OS</span></h1>
-          <p>Your academic command center</p>
+          <h1 class="brand-title">StudentLife <span class="highlight">OS</span></h1>
+          <p class="brand-sub"><span class="pulse-dot"></span>Your Academic Command Center</p>
         </div>
       </div>
 
-      <div class="auth-tabs">
-        <button class="tab-btn active" id="loginTab" onclick="showTab('login')">Sign In</button>
-        <div class="tab-slider" id="tabSlider"></div>
+      <!-- Status micro bar -->
+      <div class="card-status-bar">
+        <span class="csb-item csb-green"><span class="csb-led"></span>All Systems Online</span>
+        <span class="csb-sep">|</span>
+        <span class="csb-item">UIU Server</span>
+        <span class="csb-sep">|</span>
+        <span class="csb-item">Spring 2026</span>
       </div>
 
+      <!-- Login Form -->
       <form id="loginForm" class="auth-form">
         <div class="form-group">
-          <label>Email Address</label>
+          <label class="fld-label">Email Address</label>
           <div class="input-wrap">
-            <span class="input-icon">✉</span>
+            <svg class="input-icon-svg" viewBox="0 0 20 20" fill="none">
+              <path d="M3 6h14l-7 6-7-6zm0 0v9h14V6" stroke="currentColor" stroke-width="1.35" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
             <input type="email" id="loginEmail" placeholder="you@university.edu" required autocomplete="email" />
           </div>
         </div>
         <div class="form-group">
-          <label>Password</label>
+          <label class="fld-label">Password</label>
           <div class="input-wrap">
-            <span class="input-icon">🔒</span>
+            <svg class="input-icon-svg" viewBox="0 0 20 20" fill="none">
+              <rect x="4" y="9" width="12" height="9" rx="2" stroke="currentColor" stroke-width="1.35"/>
+              <path d="M7 9V6a3 3 0 016 0v3" stroke="currentColor" stroke-width="1.35" stroke-linecap="round"/>
+            </svg>
             <input type="password" id="loginPassword" placeholder="Enter your password" required autocomplete="current-password" />
-            <button type="button" class="toggle-pw" onclick="togglePw('loginPassword', this)">👁</button>
+            <button type="button" class="toggle-pw" onclick="togglePw('loginPassword',this)" tabindex="-1">
+              <svg class="eye-icon" viewBox="0 0 20 20" fill="none">
+                <path d="M1 10s3.5-6 9-6 9 6 9 6-3.5 6-9 6-9-6-9-6z" stroke="currentColor" stroke-width="1.35"/>
+                <circle cx="10" cy="10" r="2.5" stroke="currentColor" stroke-width="1.35"/>
+              </svg>
+            </button>
           </div>
         </div>
         <div id="loginError" class="error-msg"></div>
         <button type="submit" class="btn-primary" id="loginBtn">
           <span class="btn-text">Sign In</span>
+          <span class="btn-arrow">→</span>
           <div class="btn-loader hidden"></div>
+          <div class="btn-glow"></div>
         </button>
         <p class="auth-switch">Don't have an account? <a href="/signup">Create one →</a></p>
       </form>
-    </div>
 
+      <!-- Success overlay — activated on successful login -->
+      <div class="signin-success hidden" id="signInSuccess">
+        <div class="ss-ring r1"></div>
+        <div class="ss-ring r2"></div>
+        <div class="ss-check">✓</div>
+        <div class="ss-title">Access Granted</div>
+        <div class="ss-sub">Loading your command center…</div>
+      </div>
+    </div><!-- /.futura-card -->
+
+    <!-- Feature chips -->
     <div class="auth-features">
-      <div class="feature-chip glass-chip"><span>📊</span> Grade Analytics</div>
-      <div class="feature-chip glass-chip"><span>✅</span> Smart Todo</div>
-      <div class="feature-chip glass-chip"><span>🤖</span> AI Assistant</div>
-      <div class="feature-chip glass-chip"><span>⏰</span> Smart Reminders</div>
-      <div class="feature-chip glass-chip"><span>📅</span> Academic Calendar</div>
-      <div class="feature-chip glass-chip"><span>📈</span> Progress Charts</div>
+      <div class="feature-chip"><span class="chip-icon">📊</span>Grade Analytics</div>
+      <div class="feature-chip"><span class="chip-icon">✅</span>Smart Todo</div>
+      <div class="feature-chip"><span class="chip-icon">🤖</span>AI Assistant</div>
+      <div class="feature-chip"><span class="chip-icon">⏰</span>Reminders</div>
+      <div class="feature-chip"><span class="chip-icon">📅</span>Calendar</div>
+      <div class="feature-chip"><span class="chip-icon">📈</span>Progress</div>
     </div>
 
     <!-- View Demo Button -->
@@ -80,7 +156,7 @@
         <span class="demo-badge">No login needed</span>
       </button>
     </div>
-  </div>
+  </div><!-- /.auth-container -->
 
   <!-- ═══════════════════════════════════════════
        DEMO MODAL — live preview of the full app
@@ -112,29 +188,7 @@
 
       <!-- ── OVERVIEW TAB ── -->
       <div class="demo-page active" id="dtab-overview">
-        <div class="demo-stats-row">
-          <div class="demo-stat" style="--sc:#6366f1">
-            <div class="demo-stat-icon">🎓</div>
-            <div class="demo-stat-val">3.72</div>
-            <div class="demo-stat-lbl">Current GPA</div>
-          </div>
-          <div class="demo-stat" style="--sc:#06b6d4">
-            <div class="demo-stat-icon">📚</div>
-            <div class="demo-stat-val">5</div>
-            <div class="demo-stat-lbl">Active Courses</div>
-          </div>
-          <div class="demo-stat" style="--sc:#10b981">
-            <div class="demo-stat-icon">✅</div>
-            <div class="demo-stat-val">18/24</div>
-            <div class="demo-stat-lbl">Todos Done</div>
-          </div>
-          <div class="demo-stat" style="--sc:#f472b6">
-            <div class="demo-stat-icon">📈</div>
-            <div class="demo-stat-val">+8%</div>
-            <div class="demo-stat-lbl">vs Last Month</div>
-          </div>
-        </div>
-
+        <div class="demo-stats-row" id="demo-overview-stats"></div>
         <div class="demo-charts-row">
           <div class="demo-chart-card">
             <div class="demo-chart-title">📈 Overall Grade Trend — Spring 2026</div>
@@ -145,161 +199,93 @@
             <canvas id="dDonutChart" height="140"></canvas>
           </div>
         </div>
-
         <div class="demo-courses-preview">
           <div class="demo-section-title">Active Courses</div>
-          <div class="demo-course-row">
-            <div class="demo-course-dot" style="background:#6366f1"></div>
-            <div class="demo-course-info"><span>CSE 4401 – Machine Learning</span><span class="demo-course-code">Dr. Rahman</span></div>
-            <div class="demo-course-bar"><div class="demo-course-fill" style="width:82%;background:#6366f1"></div></div>
-            <div class="demo-course-pct" style="color:#6366f1">82%</div>
-          </div>
-          <div class="demo-course-row">
-            <div class="demo-course-dot" style="background:#06b6d4"></div>
-            <div class="demo-course-info"><span>CSE 4301 – Computer Networks</span><span class="demo-course-code">Dr. Islam</span></div>
-            <div class="demo-course-bar"><div class="demo-course-fill" style="width:76%;background:#06b6d4"></div></div>
-            <div class="demo-course-pct" style="color:#06b6d4">76%</div>
-          </div>
-          <div class="demo-course-row">
-            <div class="demo-course-dot" style="background:#f472b6"></div>
-            <div class="demo-course-info"><span>CSE 4201 – Software Engineering</span><span class="demo-course-code">Dr. Hossain</span></div>
-            <div class="demo-course-bar"><div class="demo-course-fill" style="width:89%;background:#f472b6"></div></div>
-            <div class="demo-course-pct" style="color:#f472b6">89%</div>
-          </div>
-          <div class="demo-course-row">
-            <div class="demo-course-dot" style="background:#fbbf24"></div>
-            <div class="demo-course-info"><span>MATH 3101 – Numerical Methods</span><span class="demo-course-code">Dr. Alam</span></div>
-            <div class="demo-course-bar"><div class="demo-course-fill" style="width:68%;background:#fbbf24"></div></div>
-            <div class="demo-course-pct" style="color:#fbbf24">68%</div>
-          </div>
-          <div class="demo-course-row">
-            <div class="demo-course-dot" style="background:#34d399"></div>
-            <div class="demo-course-info"><span>CSE 4101 – Compiler Design</span><span class="demo-course-code">Dr. Khan</span></div>
-            <div class="demo-course-bar"><div class="demo-course-fill" style="width:74%;background:#34d399"></div></div>
-            <div class="demo-course-pct" style="color:#34d399">74%</div>
-          </div>
+          <div id="demo-course-list"></div>
         </div>
       </div>
 
       <!-- ── GRADES TAB ── -->
       <div class="demo-page" id="dtab-grades">
         <div class="demo-grade-hero">
-          <div class="demo-grade-avg">82.4%</div>
-          <div class="demo-grade-letter">B+</div>
+          <div class="demo-grade-avg" id="demo-grade-avg">—</div>
+          <div class="demo-grade-letter" id="demo-grade-letter">—</div>
           <div class="demo-grade-sub">Semester Average · Spring 2026</div>
-          <div class="demo-grade-trend">📈 +4.2% from last semester</div>
         </div>
         <div class="demo-charts-row">
           <div class="demo-chart-card" style="flex:1.4">
-            <div class="demo-chart-title">📊 Per-Course Score Progression</div>
+            <div class="demo-chart-title">📊 Per-Course Average</div>
             <canvas id="dBarChart" height="160"></canvas>
           </div>
           <div class="demo-chart-card" style="flex:1">
-            <div class="demo-chart-title">📉 ML Course — All Assessments</div>
+            <div class="demo-chart-title">📉 Assessment Timeline</div>
             <canvas id="dLineChart" height="160"></canvas>
           </div>
         </div>
         <div class="demo-assess-list">
-          <div class="demo-section-title">Recent Assessments</div>
-          <div class="demo-assess-item">
-            <span class="demo-assess-badge type-exam">EXAM</span>
-            <div class="demo-assess-info"><div>Midterm Exam</div><div class="demo-assess-sub">CSE 4401 – Machine Learning</div></div>
-            <div class="demo-assess-score up">78/100 <span>📈</span></div>
+          <div class="demo-section-title">Assessments</div>
+          <div class="demo-add-form" id="demo-add-assess-form">
+            <select class="demo-select" id="da-course">
+              <option value="ml">ML</option>
+              <option value="nets">Networks</option>
+              <option value="se">SW Eng</option>
+              <option value="math">Num Meth</option>
+              <option value="comp">Compilers</option>
+            </select>
+            <select class="demo-select" id="da-type">
+              <option value="exam">Exam</option>
+              <option value="quiz">Quiz</option>
+              <option value="assignment">Assignment</option>
+              <option value="classtest">Class Test</option>
+              <option value="presentation">Presentation</option>
+            </select>
+            <input class="demo-input" id="da-title" placeholder="Title..." />
+            <input class="demo-input demo-input-num" id="da-score" placeholder="Score" type="number" min="0" />
+            <span class="demo-add-slash">/</span>
+            <input class="demo-input demo-input-num" id="da-max" placeholder="Max" type="number" value="100" min="1" />
+            <button class="demo-btn-add" onclick="demoAddAssessment()">+ Add</button>
           </div>
-          <div class="demo-assess-item">
-            <span class="demo-assess-badge type-assignment">ASSIGN</span>
-            <div class="demo-assess-info"><div>Neural Network Implementation</div><div class="demo-assess-sub">CSE 4401 – Machine Learning</div></div>
-            <div class="demo-assess-score up">92/100 <span>📈</span></div>
-          </div>
-          <div class="demo-assess-item">
-            <span class="demo-assess-badge type-quiz">QUIZ</span>
-            <div class="demo-assess-info"><div>Chapter 4 Quiz</div><div class="demo-assess-sub">CSE 4301 – Computer Networks</div></div>
-            <div class="demo-assess-score down">14/20 <span>📉</span></div>
-          </div>
-          <div class="demo-assess-item">
-            <span class="demo-assess-badge type-presentation">PRESENT</span>
-            <div class="demo-assess-info"><div>Project Proposal Presentation</div><div class="demo-assess-sub">CSE 4201 – Software Engineering</div></div>
-            <div class="demo-assess-score up">18/20 <span>📈</span></div>
-          </div>
-          <div class="demo-assess-item">
-            <span class="demo-assess-badge type-classtest">CT</span>
-            <div class="demo-assess-info"><div>Class Test 2</div><div class="demo-assess-sub">MATH 3101 – Numerical Methods</div></div>
-            <div class="demo-assess-score down">11/20 <span>📉</span></div>
-          </div>
+          <div id="demo-assess-items"></div>
         </div>
       </div>
 
       <!-- ── TODO TAB ── -->
       <div class="demo-page" id="dtab-todo">
         <div class="demo-todo-header">
-          <div class="demo-todo-stats">
-            <span class="demo-todo-pill done">18 Done</span>
-            <span class="demo-todo-pill pending">6 Pending</span>
-            <span class="demo-todo-pill high">2 Urgent</span>
-          </div>
+          <div class="demo-todo-stats" id="demo-todo-pills"></div>
           <div class="demo-todo-progress">
-            <div class="demo-todo-bar"><div class="demo-todo-fill" style="width:75%"></div></div>
-            <span>75% complete today</span>
+            <div class="demo-todo-bar"><div class="demo-todo-fill" id="demo-todo-fill" style="width:0%"></div></div>
+            <span id="demo-todo-pct">0% complete</span>
           </div>
         </div>
-        <div class="demo-todo-list">
-          <div class="demo-todo-item done">
-            <div class="demo-check checked">✓</div>
-            <div class="demo-todo-text"><span>Submit ML Assignment 3</span><span class="demo-tag high">High</span></div>
-            <div class="demo-todo-date">Mar 5</div>
-          </div>
-          <div class="demo-todo-item done">
-            <div class="demo-check checked">✓</div>
-            <div class="demo-todo-text"><span>Review lecture slides Ch.7</span><span class="demo-tag medium">Medium</span></div>
-            <div class="demo-todo-date">Mar 5</div>
-          </div>
-          <div class="demo-todo-item done">
-            <div class="demo-check checked">✓</div>
-            <div class="demo-todo-text"><span>Read Networks textbook pp.180-200</span><span class="demo-tag low">Low</span></div>
-            <div class="demo-todo-date">Mar 4</div>
-          </div>
-          <div class="demo-todo-item">
-            <div class="demo-check"></div>
-            <div class="demo-todo-text"><span>Prepare for CT3 – Compilers</span><span class="demo-tag high">High</span></div>
-            <div class="demo-todo-date">Mar 7</div>
-          </div>
-          <div class="demo-todo-item">
-            <div class="demo-check"></div>
-            <div class="demo-todo-text"><span>Finish SE project wireframes</span><span class="demo-tag medium">Medium</span></div>
-            <div class="demo-todo-date">Mar 8</div>
-          </div>
-          <div class="demo-todo-item">
-            <div class="demo-check"></div>
-            <div class="demo-todo-text"><span>Solve Numerical Methods worksheet</span><span class="demo-tag medium">Medium</span></div>
-            <div class="demo-todo-date">Mar 9</div>
-          </div>
-          <div class="demo-todo-item">
-            <div class="demo-check"></div>
-            <div class="demo-todo-text"><span>Study for ML Final — Part 1</span><span class="demo-tag high">High</span></div>
-            <div class="demo-todo-date">Mar 12</div>
-          </div>
+        <div class="demo-add-form">
+          <input class="demo-input" id="dt-text" placeholder="New task..." style="flex:2" onkeydown="if(event.key==='Enter')demoAddTodo()" />
+          <select class="demo-select" id="dt-priority">
+            <option value="high">High</option>
+            <option value="medium" selected>Medium</option>
+            <option value="low">Low</option>
+          </select>
+          <input class="demo-input" id="dt-date" placeholder="Date (e.g. Mar 15)" />
+          <button class="demo-btn-add" onclick="demoAddTodo()">+ Add</button>
         </div>
+        <div class="demo-todo-list" id="demo-todo-items"></div>
       </div>
 
       <!-- ── PLANNER TAB ── -->
       <div class="demo-page" id="dtab-planner">
         <div class="demo-planner-hdr">
-          <div class="demo-planner-date">📅 Friday, March 6, 2026</div>
-          <div class="demo-planner-note">Focus: Networks lab + ML revision. Sleep by 11:30.</div>
+          <div class="demo-planner-date">📅 <span id="demo-planner-date">Friday, March 6, 2026</span></div>
+          <div class="demo-planner-note" id="demo-planner-note">Focus: Networks lab + ML revision. Sleep by 11:30.</div>
         </div>
-        <div class="demo-planner-list">
-          <div class="demo-plan-item done"><span class="demo-plan-check">✓</span><span>6:30 AM — Morning review of yesterday's notes</span><span class="demo-plan-time">30 min</span></div>
-          <div class="demo-plan-item done"><span class="demo-plan-check">✓</span><span>8:00 AM — Attend ML Lecture (Room 402)</span><span class="demo-plan-time">1 hr</span></div>
-          <div class="demo-plan-item done"><span class="demo-plan-check">✓</span><span>10:00 AM — Networks Lab Session</span><span class="demo-plan-time">2 hr</span></div>
-          <div class="demo-plan-item done"><span class="demo-plan-check">✓</span><span>12:30 PM — Lunch + short break</span><span class="demo-plan-time">45 min</span></div>
-          <div class="demo-plan-item">    <span class="demo-plan-check"></span><span>2:00 PM — Work on SE project wireframes</span><span class="demo-plan-time">2 hr</span></div>
-          <div class="demo-plan-item">    <span class="demo-plan-check"></span><span>4:30 PM — Compiler Design problem set</span><span class="demo-plan-time">1.5 hr</span></div>
-          <div class="demo-plan-item">    <span class="demo-plan-check"></span><span>7:00 PM — ML Chapter 8 reading</span><span class="demo-plan-time">1 hr</span></div>
-          <div class="demo-plan-item">    <span class="demo-plan-check"></span><span>9:00 PM — Review & plan tomorrow</span><span class="demo-plan-time">30 min</span></div>
+        <div class="demo-add-form">
+          <input class="demo-input" id="dp-task" placeholder="Add task (e.g. 3:00 PM — Study session)" style="flex:3" onkeydown="if(event.key==='Enter')demoAddPlannerTask()" />
+          <input class="demo-input" id="dp-time" placeholder="Duration" />
+          <button class="demo-btn-add" onclick="demoAddPlannerTask()">+ Add</button>
         </div>
+        <div class="demo-planner-list" id="demo-planner-items"></div>
         <div class="demo-planner-progress">
-          <div class="demo-planner-bar"><div class="demo-planner-fill" style="width:50%"></div></div>
-          <span>4 / 8 tasks completed</span>
+          <div class="demo-planner-bar"><div class="demo-planner-fill" id="demo-planner-fill" style="width:0%"></div></div>
+          <span id="demo-planner-pct">0 / 0 tasks completed</span>
         </div>
       </div>
 
@@ -309,17 +295,13 @@
           <div class="demo-bot-avatar">🤖</div>
           <div>
             <div class="demo-bot-name">StudentLife Bot</div>
-            <div class="demo-bot-status">● Online · reads your real data</div>
+            <div class="demo-bot-status" id="demo-bot-status">● Online · reads your live demo data</div>
           </div>
         </div>
-        <div class="demo-chat">
-          <div class="demo-msg bot"><div class="demo-bubble bot">Hey Abdul! 👋 You have <strong>2 urgent tasks</strong> due this week and a CT in Compilers on Mar 7. Want a study plan?</div></div>
-          <div class="demo-msg user"><div class="demo-bubble user">How are my grades?</div></div>
-          <div class="demo-msg bot"><div class="demo-bubble bot">📊 Your semester average is <strong>82.4% (B+)</strong>, up 4.2% from last semester!<br><br>Best: <strong>Software Engineering 89%</strong> 🏆<br>Needs work: <strong>Numerical Methods 68%</strong> ⚠️<br><br>You're on track for Dean's List if you score 85%+ in finals!</div></div>
-          <div class="demo-msg user"><div class="demo-bubble user">What should I study today?</div></div>
-          <div class="demo-msg bot"><div class="demo-bubble bot">Based on your planner for today:<br><br>📌 <strong>Priority 1</strong> — SE wireframes (due Mar 8)<br>📌 <strong>Priority 2</strong> — Compiler CT3 prep (Mar 7!)<br>📌 <strong>Priority 3</strong> — ML Chapter 8<br><br>You've already completed 4/8 tasks today. Great momentum! 🔥</div></div>
-          <div class="demo-msg user"><div class="demo-bubble user">Remind me of upcoming exams</div></div>
-          <div class="demo-msg bot"><div class="demo-bubble bot">⏰ Upcoming deadlines:<br><br>🔴 <strong>Mar 7</strong> — Compiler Design CT3<br>🟡 <strong>Mar 10</strong> — Networks Assignment due<br>🟡 <strong>Mar 14</strong> — ML Midterm 2<br>🟢 <strong>Mar 20</strong> — SE Project Demo<br><br>Want me to break down a study schedule for the ML midterm?</div></div>
+        <div class="demo-chat" id="demo-chat-messages"></div>
+        <div class="demo-chat-input-row">
+          <input class="demo-chat-input" id="demo-bot-input" placeholder="Ask about your grades, tasks, planner..." onkeydown="if(event.key==='Enter')demoSendMessage()" />
+          <button class="demo-send-btn" onclick="demoSendMessage()">Send ↑</button>
         </div>
       </div>
 
@@ -334,12 +316,516 @@
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
   <script src="js/three-bg.js"></script>
   <script src="js/auth.js"></script>
+  <script src="js/login-fx.js"></script>
   <script>
-  /* ===== DEMO MODAL LOGIC ===== */
+  /* ═══════════════════════════════════════
+     DEMO STATE — single source of truth
+     ═══════════════════════════════════════ */
+  const DD = {
+    courses: [
+      { id:'ml',   name:'CSE 4401 – Machine Learning',     short:'ML',       code:'Dr. Rahman',  color:'#6366f1' },
+      { id:'nets', name:'CSE 4301 – Computer Networks',    short:'Networks', code:'Dr. Islam',   color:'#06b6d4' },
+      { id:'se',   name:'CSE 4201 – Software Engineering', short:'SW Eng',   code:'Dr. Hossain', color:'#f472b6' },
+      { id:'math', name:'MATH 3101 – Numerical Methods',   short:'Num Meth', code:'Dr. Alam',    color:'#fbbf24' },
+      { id:'comp', name:'CSE 4101 – Compiler Design',      short:'Compilers',code:'Dr. Khan',    color:'#34d399' }
+    ],
+    assessments: [
+      { id:1, courseId:'ml',   type:'exam',         title:'Midterm Exam',                   score:78,  max:100 },
+      { id:2, courseId:'ml',   type:'assignment',   title:'Neural Network Implementation',  score:92,  max:100 },
+      { id:3, courseId:'nets', type:'quiz',         title:'Chapter 4 Quiz',                 score:14,  max:20  },
+      { id:4, courseId:'se',   type:'presentation', title:'Project Proposal Presentation',  score:18,  max:20  },
+      { id:5, courseId:'math', type:'classtest',    title:'Class Test 2',                   score:11,  max:20  }
+    ],
+    todos: [
+      { id:1, text:'Submit ML Assignment 3',           priority:'high',   date:'Mar 5',  done:true  },
+      { id:2, text:'Review lecture slides Ch.7',       priority:'medium', date:'Mar 5',  done:true  },
+      { id:3, text:'Read Networks textbook pp.180-200',priority:'low',    date:'Mar 4',  done:true  },
+      { id:4, text:'Prepare for CT3 – Compilers',      priority:'high',   date:'Mar 7',  done:false },
+      { id:5, text:'Finish SE project wireframes',     priority:'medium', date:'Mar 8',  done:false },
+      { id:6, text:'Solve Numerical Methods worksheet',priority:'medium', date:'Mar 9',  done:false },
+      { id:7, text:'Study for ML Final — Part 1',      priority:'high',   date:'Mar 12', done:false }
+    ],
+    planner: {
+      date: 'Friday, March 6, 2026',
+      note: 'Focus: Networks lab + ML revision. Sleep by 11:30.',
+      tasks: [
+        { id:1, text:"6:30 AM — Morning review of yesterday's notes", time:'30 min',  done:true  },
+        { id:2, text:'8:00 AM — Attend ML Lecture (Room 402)',         time:'1 hr',    done:true  },
+        { id:3, text:'10:00 AM — Networks Lab Session',                time:'2 hr',    done:true  },
+        { id:4, text:'12:30 PM — Lunch + short break',                 time:'45 min',  done:true  },
+        { id:5, text:'2:00 PM — Work on SE project wireframes',        time:'2 hr',    done:false },
+        { id:6, text:'4:30 PM — Compiler Design problem set',          time:'1.5 hr',  done:false },
+        { id:7, text:'7:00 PM — ML Chapter 8 reading',                 time:'1 hr',    done:false },
+        { id:8, text:'9:00 PM — Review & plan tomorrow',               time:'30 min',  done:false }
+      ]
+    },
+    chat: [
+      { role:'bot',  text:"Hey Abdul! 👋 I can see your grades, todos, and planner in real time. Try asking me anything, or use the tabs above to edit your data!" },
+    ],
+    _nextTodoId:   8,
+    _nextAssessId: 6,
+    _nextPlanId:   9,
+
+    /* ── Computed ── */
+    courseAvg(id) {
+      const items = this.assessments.filter(a => a.courseId === id);
+      if (!items.length) return 0;
+      return Math.round(items.reduce((s,a) => s + a.score/a.max*100, 0) / items.length);
+    },
+    overallAvg() {
+      if (!this.assessments.length) return 0;
+      return Math.round(this.assessments.reduce((s,a) => s + a.score/a.max*100, 0) / this.assessments.length);
+    },
+    gpa() {
+      const avg = this.overallAvg();
+      if (avg >= 90) return '4.00'; if (avg >= 85) return '3.70';
+      if (avg >= 80) return '3.30'; if (avg >= 75) return '3.00';
+      if (avg >= 70) return '2.70'; if (avg >= 65) return '2.30';
+      if (avg >= 60) return '2.00'; return '1.70';
+    },
+    letterGrade(avg) {
+      if (avg >= 90) return 'A+'; if (avg >= 85) return 'A';
+      if (avg >= 80) return 'B+'; if (avg >= 75) return 'B';
+      if (avg >= 70) return 'C+'; if (avg >= 65) return 'C';
+      if (avg >= 60) return 'D';  return 'F';
+    },
+    todosDone()    { return this.todos.filter(t => t.done).length; },
+    todosTotal()   { return this.todos.length; },
+    urgentPending(){ return this.todos.filter(t => !t.done && t.priority === 'high').length; },
+  };
+
+  /* ═══════════════════════════════════════
+     CHART INSTANCES
+     ═══════════════════════════════════════ */
+  let dOverallChart, dDonutChart, dBarChart, dLineChart;
+  let _overviewChartsReady = false, _gradeChartsReady = false;
+
+  /* ═══════════════════════════════════════
+     RENDER — OVERVIEW
+     ═══════════════════════════════════════ */
+  function renderOverview() {
+    const avg  = DD.overallAvg();
+    const done = DD.todosDone();
+    const tot  = DD.todosTotal();
+
+    /* Stats cards */
+    document.getElementById('demo-overview-stats').innerHTML = `
+      <div class="demo-stat" style="--sc:#6366f1">
+        <div class="demo-stat-icon">🎓</div>
+        <div class="demo-stat-val">${DD.gpa()}</div>
+        <div class="demo-stat-lbl">Current GPA</div>
+      </div>
+      <div class="demo-stat" style="--sc:#06b6d4">
+        <div class="demo-stat-icon">📚</div>
+        <div class="demo-stat-val">${DD.courses.length}</div>
+        <div class="demo-stat-lbl">Active Courses</div>
+      </div>
+      <div class="demo-stat" style="--sc:#10b981">
+        <div class="demo-stat-icon">✅</div>
+        <div class="demo-stat-val">${done}/${tot}</div>
+        <div class="demo-stat-lbl">Todos Done</div>
+      </div>
+      <div class="demo-stat" style="--sc:#f472b6">
+        <div class="demo-stat-icon">📈</div>
+        <div class="demo-stat-val">${avg}%</div>
+        <div class="demo-stat-lbl">Avg Score</div>
+      </div>`;
+
+    /* Course list */
+    document.getElementById('demo-course-list').innerHTML = DD.courses.map(c => {
+      const pct = DD.courseAvg(c.id);
+      return `<div class="demo-course-row">
+        <div class="demo-course-dot" style="background:${c.color}"></div>
+        <div class="demo-course-info"><span>${c.name}</span><span class="demo-course-code">${c.code}</span></div>
+        <div class="demo-course-bar"><div class="demo-course-fill" style="width:${pct}%;background:${c.color}"></div></div>
+        <div class="demo-course-pct" style="color:${c.color}">${pct}%</div>
+      </div>`;
+    }).join('');
+
+    /* Charts */
+    if (_overviewChartsReady) {
+      /* Trend: recalc per-course avgs as weekly proxy */
+      const avgs = DD.courses.map(c => DD.courseAvg(c.id));
+      const trend = [Math.max(55, avg-11), Math.max(55, avg-8), Math.max(55, avg-10),
+                     Math.max(55, avg-4),  Math.max(55, avg-6), Math.max(55, avg-1),
+                     Math.max(55, avg-2),  avg];
+      dOverallChart.data.datasets[0].data = trend;
+      dOverallChart.update('none');
+
+      /* Donut: score buckets */
+      const pcts = DD.assessments.map(a => a.score/a.max*100);
+      const A = pcts.filter(v=>v>=85).length;
+      const B = pcts.filter(v=>v>=70&&v<85).length;
+      const C = pcts.filter(v=>v>=55&&v<70).length;
+      const P = pcts.filter(v=>v<55).length;
+      dDonutChart.data.datasets[0].data = [A,B,C,P];
+      dDonutChart.update('none');
+    }
+  }
+
+  function initOverviewCharts() {
+    if (_overviewChartsReady) { renderOverview(); return; }
+    const avg = DD.overallAvg();
+    const trend = [Math.max(55, avg-11), Math.max(55, avg-8), Math.max(55, avg-10),
+                   Math.max(55, avg-4),  Math.max(55, avg-6), Math.max(55, avg-1),
+                   Math.max(55, avg-2),  avg];
+    dOverallChart = new Chart(document.getElementById('dOverallChart'), {
+      type:'line',
+      data:{ labels:['Wk 1','Wk 2','Wk 3','Wk 4','Wk 5','Wk 6','Wk 7','Wk 8'],
+        datasets:[{ label:'Avg%', data:trend, borderColor:'#6366f1',
+          backgroundColor:'rgba(99,102,241,0.12)', fill:true, tension:0.45,
+          pointBackgroundColor:'#818cf8', pointRadius:4 }] },
+      options:{ responsive:true, plugins:{legend:{display:false}}, scales:{
+        x:{ticks:{color:'#94a3b8',font:{size:10}},grid:{color:'rgba(255,255,255,0.05)'}},
+        y:{ticks:{color:'#94a3b8',font:{size:10},callback:v=>v+'%'},
+           grid:{color:'rgba(255,255,255,0.05)'},min:50,max:100}}}
+    });
+
+    const pcts = DD.assessments.map(a => a.score/a.max*100);
+    const A=pcts.filter(v=>v>=85).length, B=pcts.filter(v=>v>=70&&v<85).length,
+          C=pcts.filter(v=>v>=55&&v<70).length, P=pcts.filter(v=>v<55).length;
+    dDonutChart = new Chart(document.getElementById('dDonutChart'), {
+      type:'doughnut',
+      data:{ labels:['A (≥85)','B (70-84)','C (55-69)','Below C'],
+        datasets:[{ data:[A,B,C,P],
+          backgroundColor:['rgba(99,102,241,0.85)','rgba(6,182,212,0.85)',
+                           'rgba(245,158,11,0.85)','rgba(71,85,105,0.5)'],
+          borderColor:'transparent', borderWidth:3 }] },
+      options:{ responsive:true, cutout:'68%',
+        plugins:{legend:{labels:{color:'#94a3b8',font:{size:11},boxWidth:12}}} }
+    });
+    _overviewChartsReady = true;
+  }
+
+  /* ═══════════════════════════════════════
+     RENDER — GRADES
+     ═══════════════════════════════════════ */
+  const typeLabels = { exam:'EXAM', quiz:'QUIZ', assignment:'ASSIGN',
+                       classtest:'CT', presentation:'PRESENT' };
+  const typeCls    = { exam:'type-exam', quiz:'type-quiz', assignment:'type-assignment',
+                       classtest:'type-classtest', presentation:'type-presentation' };
+
+  function renderGrades() {
+    const avg = DD.overallAvg();
+    const el  = document.getElementById('demo-grade-avg');
+    const ll  = document.getElementById('demo-grade-letter');
+    if (el) el.textContent = avg + '%';
+    if (ll) ll.textContent = DD.letterGrade(avg);
+
+    document.getElementById('demo-assess-items').innerHTML = DD.assessments.map(a => {
+      const c   = DD.courses.find(x=>x.id===a.courseId);
+      const pct = Math.round(a.score/a.max*100);
+      const dir = pct >= 75 ? 'up' : 'down';
+      return `<div class="demo-assess-item">
+        <span class="demo-assess-badge ${typeCls[a.type]||'type-exam'}">${typeLabels[a.type]||'?'}</span>
+        <div class="demo-assess-info">
+          <div>${a.title}</div>
+          <div class="demo-assess-sub">${c?c.name:'Unknown'}</div>
+        </div>
+        <div class="demo-assess-score ${dir}" style="display:flex;align-items:center;gap:6px">
+          <input type="number" class="demo-inline-score" value="${a.score}" min="0" max="${a.max}"
+            onchange="demoEditScore(${a.id},this.value,${a.max})" /> / ${a.max}
+          <span>${dir==='up'?'📈':'📉'}</span>
+        </div>
+        <button class="demo-del-btn" onclick="demoDeleteAssessment(${a.id})" title="Delete">✕</button>
+      </div>`;
+    }).join('') || '<div style="color:#94a3b8;text-align:center;padding:1rem">No assessments yet. Add one above!</div>';
+
+    if (_gradeChartsReady) updateGradeCharts();
+  }
+
+  function initGradeCharts() {
+    if (_gradeChartsReady) { renderGrades(); return; }
+    const avgs = DD.courses.map(c => DD.courseAvg(c.id));
+    const colors = DD.courses.map(c => c.color.replace('#','rgba(').replace(/^rgba\(/,'rgba(')
+      .replace('rgba(','').split('').join(''));
+    const bgColors = DD.courses.map(c => hexToRgba(c.color, 0.8));
+
+    dBarChart = new Chart(document.getElementById('dBarChart'), {
+      type:'bar',
+      data:{ labels: DD.courses.map(c=>c.short),
+        datasets:[{ label:'Average %', data:avgs,
+          backgroundColor: bgColors, borderRadius:8, borderSkipped:false }] },
+      options:{ responsive:true, plugins:{legend:{display:false}}, scales:{
+        x:{ticks:{color:'#94a3b8'},grid:{display:false}},
+        y:{ticks:{color:'#94a3b8',callback:v=>v+'%'},
+           grid:{color:'rgba(255,255,255,0.05)'},min:0,max:100}}}
+    });
+
+    const mlItems = DD.assessments.filter(a=>a.courseId==='ml');
+    dLineChart = new Chart(document.getElementById('dLineChart'), {
+      type:'line',
+      data:{ labels: mlItems.map(a=>a.title.split(' ')[0]),
+        datasets:[{ label:'ML%', data: mlItems.map(a=>Math.round(a.score/a.max*100)),
+          borderColor:'#6366f1', backgroundColor:'rgba(99,102,241,0.1)',
+          fill:true, tension:0.4, pointBackgroundColor:'#818cf8', pointRadius:5 }] },
+      options:{ responsive:true, plugins:{legend:{display:false}}, scales:{
+        x:{ticks:{color:'#94a3b8',font:{size:10}},grid:{color:'rgba(255,255,255,0.05)'}},
+        y:{ticks:{color:'#94a3b8',callback:v=>v+'%'},
+           grid:{color:'rgba(255,255,255,0.05)'},min:0,max:100}}}
+    });
+    _gradeChartsReady = true;
+    renderGrades();
+  }
+
+  function updateGradeCharts() {
+    dBarChart.data.datasets[0].data = DD.courses.map(c => DD.courseAvg(c.id));
+    dBarChart.update('none');
+    const mlItems = DD.assessments.filter(a=>a.courseId==='ml');
+    dLineChart.data.labels   = mlItems.map(a=>a.title.split(' ')[0]);
+    dLineChart.data.datasets[0].data = mlItems.map(a=>Math.round(a.score/a.max*100));
+    dLineChart.update('none');
+  }
+
+  function hexToRgba(hex, alpha) {
+    const r = parseInt(hex.slice(1,3),16), g = parseInt(hex.slice(3,5),16), b = parseInt(hex.slice(5,7),16);
+    return `rgba(${r},${g},${b},${alpha})`;
+  }
+
+  /* ═══════════════════════════════════════
+     RENDER — TODOS
+     ═══════════════════════════════════════ */
+  function renderTodos() {
+    const done    = DD.todosDone();
+    const total   = DD.todosTotal();
+    const urgent  = DD.urgentPending();
+    const pending = total - done;
+    const pct     = total ? Math.round(done/total*100) : 0;
+
+    document.getElementById('demo-todo-pills').innerHTML = `
+      <span class="demo-todo-pill done">${done} Done</span>
+      <span class="demo-todo-pill pending">${pending} Pending</span>
+      <span class="demo-todo-pill high">${urgent} Urgent</span>`;
+    const fill = document.getElementById('demo-todo-fill');
+    if (fill) { fill.style.width = pct + '%'; }
+    const pctEl = document.getElementById('demo-todo-pct');
+    if (pctEl) pctEl.textContent = pct + '% complete';
+
+    document.getElementById('demo-todo-items').innerHTML = DD.todos.map(t => `
+      <div class="demo-todo-item ${t.done?'done':''}">
+        <div class="demo-check ${t.done?'checked':''}" onclick="demoToggleTodo(${t.id})">${t.done?'✓':''}</div>
+        <div class="demo-todo-text">
+          <span>${escH(t.text)}</span>
+          <span class="demo-tag ${t.priority}">${t.priority.charAt(0).toUpperCase()+t.priority.slice(1)}</span>
+        </div>
+        <div class="demo-todo-date">${t.date}</div>
+        <button class="demo-del-btn" onclick="demoDeleteTodo(${t.id})" title="Delete">✕</button>
+      </div>`).join('') || '<div style="color:#94a3b8;text-align:center;padding:1rem">All done! Add a new task above.</div>';
+  }
+
+  /* ═══════════════════════════════════════
+     RENDER — PLANNER
+     ═══════════════════════════════════════ */
+  function renderPlanner() {
+    const tasks = DD.planner.tasks;
+    const done  = tasks.filter(t=>t.done).length;
+    const total = tasks.length;
+    const pct   = total ? Math.round(done/total*100) : 0;
+
+    document.getElementById('demo-planner-items').innerHTML = tasks.map(t => `
+      <div class="demo-plan-item ${t.done?'done':''}">
+        <span class="demo-plan-check" onclick="demoTogglePlanTask(${t.id})">${t.done?'✓':''}</span>
+        <span class="demo-plan-text">${escH(t.text)}</span>
+        <span class="demo-plan-time">${t.time}</span>
+        <button class="demo-del-btn" onclick="demoDeletePlanTask(${t.id})" title="Delete">✕</button>
+      </div>`).join('') || '<div style="color:#94a3b8;text-align:center;padding:1rem">No tasks yet. Add one above!</div>';
+
+    const fill = document.getElementById('demo-planner-fill');
+    if (fill) fill.style.width = pct+'%';
+    const pctEl = document.getElementById('demo-planner-pct');
+    if (pctEl) pctEl.textContent = `${done} / ${total} tasks completed`;
+  }
+
+  /* ═══════════════════════════════════════
+     RENDER — BOT CHAT
+     ═══════════════════════════════════════ */
+  function renderChat() {
+    const el = document.getElementById('demo-chat-messages');
+    el.innerHTML = DD.chat.map(m => `
+      <div class="demo-msg ${m.role}">
+        <div class="demo-bubble ${m.role}">${m.text}</div>
+      </div>`).join('');
+    el.scrollTop = el.scrollHeight;
+  }
+
+  /* ═══════════════════════════════════════
+     RENDER ALL
+     ═══════════════════════════════════════ */
+  function renderAll() {
+    renderOverview();
+    renderTodos();
+    renderPlanner();
+    if (_gradeChartsReady) renderGrades();
+    renderChat();
+  }
+
+  /* ═══════════════════════════════════════
+     ACTIONS — TODOS
+     ═══════════════════════════════════════ */
+  function demoAddTodo() {
+    const text = document.getElementById('dt-text').value.trim();
+    if (!text) { shake('dt-text'); return; }
+    const pri  = document.getElementById('dt-priority').value;
+    const date = document.getElementById('dt-date').value.trim() || 'Soon';
+    DD.todos.push({ id: DD._nextTodoId++, text, priority:pri, date, done:false });
+    document.getElementById('dt-text').value = '';
+    document.getElementById('dt-date').value = '';
+    renderTodos();
+    renderOverview();
+  }
+
+  function demoToggleTodo(id) {
+    const t = DD.todos.find(x=>x.id===id);
+    if (t) { t.done = !t.done; renderTodos(); renderOverview(); }
+  }
+
+  function demoDeleteTodo(id) {
+    DD.todos = DD.todos.filter(x=>x.id!==id);
+    renderTodos(); renderOverview();
+  }
+
+  /* ═══════════════════════════════════════
+     ACTIONS — ASSESSMENTS
+     ═══════════════════════════════════════ */
+  function demoAddAssessment() {
+    const title = document.getElementById('da-title').value.trim();
+    const score = parseFloat(document.getElementById('da-score').value);
+    const max   = parseFloat(document.getElementById('da-max').value) || 100;
+    if (!title || isNaN(score)) { shake('da-title'); return; }
+    const courseId = document.getElementById('da-course').value;
+    const type     = document.getElementById('da-type').value;
+    DD.assessments.push({ id:DD._nextAssessId++, courseId, type, title, score, max });
+    document.getElementById('da-title').value = '';
+    document.getElementById('da-score').value = '';
+    document.getElementById('da-max').value   = '100';
+    renderGrades();
+    renderOverview();
+  }
+
+  function demoEditScore(id, val, max) {
+    const a = DD.assessments.find(x=>x.id===id);
+    if (a) {
+      const s = Math.min(parseFloat(val)||0, max);
+      a.score = s;
+      renderGrades();
+      renderOverview();
+    }
+  }
+
+  function demoDeleteAssessment(id) {
+    DD.assessments = DD.assessments.filter(x=>x.id!==id);
+    renderGrades(); renderOverview();
+  }
+
+  /* ═══════════════════════════════════════
+     ACTIONS — PLANNER
+     ═══════════════════════════════════════ */
+  function demoAddPlannerTask() {
+    const text = document.getElementById('dp-task').value.trim();
+    if (!text) { shake('dp-task'); return; }
+    const time = document.getElementById('dp-time').value.trim() || '—';
+    DD.planner.tasks.push({ id:DD._nextPlanId++, text, time, done:false });
+    document.getElementById('dp-task').value = '';
+    document.getElementById('dp-time').value = '';
+    renderPlanner();
+  }
+
+  function demoTogglePlanTask(id) {
+    const t = DD.planner.tasks.find(x=>x.id===id);
+    if (t) { t.done = !t.done; renderPlanner(); }
+  }
+
+  function demoDeletePlanTask(id) {
+    DD.planner.tasks = DD.planner.tasks.filter(x=>x.id!==id);
+    renderPlanner();
+  }
+
+  /* ═══════════════════════════════════════
+     ACTIONS — BOT
+     ═══════════════════════════════════════ */
+  function demoSendMessage() {
+    const inp = document.getElementById('demo-bot-input');
+    const msg = inp.value.trim();
+    if (!msg) return;
+    inp.value = '';
+    DD.chat.push({ role:'user', text: escH(msg) });
+    renderChat();
+    setTimeout(() => {
+      DD.chat.push({ role:'bot', text: getDemoBotReply(msg) });
+      renderChat();
+    }, 620);
+  }
+
+  function getDemoBotReply(msg) {
+    const m  = msg.toLowerCase();
+    const avg  = DD.overallAvg();
+    const done = DD.todosDone(), total = DD.todosTotal(), pending = total - done;
+    const urgent = DD.urgentPending();
+    const best   = DD.courses.slice().sort((a,b)=>DD.courseAvg(b.id)-DD.courseAvg(a.id))[0];
+    const worst  = DD.courses.slice().sort((a,b)=>DD.courseAvg(a.id)-DD.courseAvg(b.id))[0];
+    const planDone = DD.planner.tasks.filter(t=>t.done).length;
+    const planTotal= DD.planner.tasks.length;
+
+    if (/grade|score|average|gpa|result|marks/i.test(m))
+      return `📊 Your current semester average is <strong>${avg}% (${DD.letterGrade(avg)})</strong> — GPA: <strong>${DD.gpa()}</strong>.<br><br>` +
+             `🏆 Best: <strong>${best.name} ${DD.courseAvg(best.id)}%</strong><br>` +
+             `⚠️ Needs work: <strong>${worst.name} ${DD.courseAvg(worst.id)}%</strong>`;
+
+    if (/todo|task|pending|done|complet/i.test(m))
+      return `✅ You have <strong>${done}/${total}</strong> todos completed.<br>` +
+             `${urgent > 0 ? `🔴 <strong>${urgent} urgent task${urgent>1?'s':''}</strong> still pending!<br>` : ''}` +
+             `${pending > 0 ? `Pending: ${DD.todos.filter(t=>!t.done).map(t=>t.text).slice(0,3).join(', ')}${pending>3?'…':''}` : 'All tasks done! 🎉'}`;
+
+    if (/plan|today|schedule|planner/i.test(m))
+      return `📅 Today (${DD.planner.date}):<br>` +
+             `<strong>${planDone}/${planTotal}</strong> tasks completed.<br><br>` +
+             (DD.planner.tasks.filter(t=>!t.done).slice(0,3).map(t=>`▸ ${t.text}`).join('<br>') || 'All done for today! 🥳');
+
+    if (/course|subject|class/i.test(m))
+      return `📚 Your ${DD.courses.length} courses:<br>` +
+             DD.courses.map(c=>`<span style="color:${c.color}">▸</span> ${c.short}: <strong>${DD.courseAvg(c.id)}%</strong>`).join('<br>');
+
+    if (/help|can you|what can/i.test(m))
+      return `I can help you with:<br>• "How are my grades?" 📊<br>• "What tasks are pending?" ✅<br>• "What's on my planner?" 📅<br>• "Show me my courses" 📚<br><br>Or just edit the tabs above — I react to your changes in real time! 🔄`;
+
+    if (/hello|hi|hey|hola/i.test(m))
+      return `Hey there! 👋 Your average is <strong>${avg}%</strong> and you have <strong>${pending}</strong> task${pending!==1?'s':''} pending. What do you want to know?`;
+
+    /* fallback */
+    return `You asked: "<em>${escH(msg)}</em>"<br><br>I track your live demo data. Try asking about your grades, todos, planner, or courses!`;
+  }
+
+  /* ═══════════════════════════════════════
+     MODAL CONTROL
+     ═══════════════════════════════════════ */
   function openDemo() {
-    document.getElementById('demoOverlay').classList.remove('hidden');
-    document.body.style.overflow = 'hidden';
-    setTimeout(initDemoCharts, 80);
+    const btn = document.querySelector('.btn-demo');
+    const txt = btn ? btn.querySelector('span:nth-child(2)') : null;
+    if (btn) btn.disabled = true;
+    if (txt) txt.textContent = 'Signing in…';
+
+    fetch('/api/auth/demo-login', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' }
+    })
+      .then(r => r.json())
+      .then(data => {
+        if (!data.token) throw new Error('No token');
+        localStorage.setItem('sl_token',   data.token);
+        localStorage.setItem('sl_user',    JSON.stringify(data.user));
+        localStorage.setItem('sl_session', data.sessionId);
+        // Trigger login-success animation then navigate
+        if (typeof window.triggerLoginSuccess === 'function') {
+          window.triggerLoginSuccess(() => { window.location.href = '/dashboard'; });
+        } else {
+          window.location.href = '/dashboard';
+        }
+      })
+      .catch(() => {
+        if (btn) btn.disabled = false;
+        if (txt) txt.textContent = 'View Live Demo';
+        alert('Demo temporarily unavailable. Please try again.');
+      });
   }
   function closeDemo() {
     document.getElementById('demoOverlay').classList.add('hidden');
@@ -349,99 +835,30 @@
     if (e.target === document.getElementById('demoOverlay')) closeDemo();
   }
   function switchDemoTab(tab, btn) {
-    document.querySelectorAll('.demo-tab').forEach(t => t.classList.remove('active'));
-    document.querySelectorAll('.demo-page').forEach(p => p.classList.remove('active'));
+    document.querySelectorAll('.demo-tab').forEach(t=>t.classList.remove('active'));
+    document.querySelectorAll('.demo-page').forEach(p=>p.classList.remove('active'));
     btn.classList.add('active');
-    document.getElementById('dtab-' + tab).classList.add('active');
-    if (tab === 'grades') setTimeout(initGradeCharts, 60);
+    document.getElementById('dtab-'+tab).classList.add('active');
+    if (tab === 'overview') { renderOverview(); setTimeout(initOverviewCharts, 60); }
+    if (tab === 'grades')   { setTimeout(initGradeCharts, 60); }
+    if (tab === 'todo')     { renderTodos(); }
+    if (tab === 'planner')  { renderPlanner(); }
+    if (tab === 'bot')      { renderChat(); }
   }
 
-  let chartsInit = false, gradeChartsInit = false;
-
-  function initDemoCharts() {
-    if (chartsInit) return; chartsInit = true;
-
-    /* Overall trend line */
-    new Chart(document.getElementById('dOverallChart'), {
-      type: 'line',
-      data: {
-        labels: ['Week 1','Week 2','Week 3','Week 4','Week 5','Week 6','Week 7','Week 8'],
-        datasets: [{
-          label: 'Average %',
-          data: [71, 74, 72, 78, 76, 81, 80, 82],
-          borderColor: '#6366f1',
-          backgroundColor: 'rgba(99,102,241,0.12)',
-          fill: true,
-          tension: 0.45,
-          pointBackgroundColor: '#818cf8',
-          pointRadius: 4,
-        }]
-      },
-      options: { responsive:true, plugins:{legend:{display:false}}, scales:{
-        x:{ticks:{color:'#94a3b8',font:{size:10}},grid:{color:'rgba(255,255,255,0.05)'}},
-        y:{ticks:{color:'#94a3b8',font:{size:10},callback:v=>v+'%'},grid:{color:'rgba(255,255,255,0.05)'},min:60,max:100}
-      }}
-    });
-
-    /* Donut */
-    new Chart(document.getElementById('dDonutChart'), {
-      type: 'doughnut',
-      data: {
-        labels: ['A (≥85)','B (70-84)','C (55-69)','Pending'],
-        datasets: [{
-          data: [28, 45, 17, 10],
-          backgroundColor: ['rgba(99,102,241,0.85)','rgba(6,182,212,0.85)','rgba(245,158,11,0.85)','rgba(71,85,105,0.5)'],
-          borderColor: 'transparent',
-          borderWidth: 3,
-        }]
-      },
-      options: { responsive:true, cutout:'68%', plugins:{legend:{labels:{color:'#94a3b8',font:{size:11},boxWidth:12}}} }
-    });
+  /* ═══════════════════════════════════════
+     UTILITIES
+     ═══════════════════════════════════════ */
+  function escH(s) {
+    return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
   }
-
-  function initGradeCharts() {
-    if (gradeChartsInit) return; gradeChartsInit = true;
-
-    /* Bar — per course latest avg */
-    new Chart(document.getElementById('dBarChart'), {
-      type: 'bar',
-      data: {
-        labels: ['ML','Networks','SW Eng','Num Meth','Compilers'],
-        datasets: [{
-          label: 'Average %',
-          data: [82, 76, 89, 68, 74],
-          backgroundColor: ['rgba(99,102,241,0.8)','rgba(6,182,212,0.8)','rgba(244,114,182,0.8)','rgba(251,191,36,0.8)','rgba(52,211,153,0.8)'],
-          borderRadius: 8,
-          borderSkipped: false,
-        }]
-      },
-      options: { responsive:true, plugins:{legend:{display:false}}, scales:{
-        x:{ticks:{color:'#94a3b8'},grid:{display:false}},
-        y:{ticks:{color:'#94a3b8',callback:v=>v+'%'},grid:{color:'rgba(255,255,255,0.05)'},min:0,max:100}
-      }}
-    });
-
-    /* ML line — progression per assessment */
-    new Chart(document.getElementById('dLineChart'), {
-      type: 'line',
-      data: {
-        labels: ['CT1','Quiz1','Assign1','CT2','Quiz2','Assign2','Midterm','Assign3'],
-        datasets: [{
-          label: 'ML Score %',
-          data: [65, 70, 88, 72, 75, 92, 78, 92],
-          borderColor: '#6366f1',
-          backgroundColor: 'rgba(99,102,241,0.1)',
-          fill: true,
-          tension: 0.4,
-          pointBackgroundColor: v => v.raw >= 80 ? '#10b981' : '#ef4444',
-          pointRadius: 5,
-        }]
-      },
-      options: { responsive:true, plugins:{legend:{display:false}}, scales:{
-        x:{ticks:{color:'#94a3b8',font:{size:10}},grid:{color:'rgba(255,255,255,0.05)'}},
-        y:{ticks:{color:'#94a3b8',callback:v=>v+'%'},grid:{color:'rgba(255,255,255,0.05)'},min:50,max:100}
-      }}
-    });
+  function shake(id) {
+    const el = document.getElementById(id);
+    if (!el) return;
+    el.style.animation = 'none';
+    el.offsetHeight;
+    el.style.animation = 'demoShake 0.35s ease';
+    setTimeout(()=>{ el.style.animation=''; }, 400);
   }
   </script>
 </body>

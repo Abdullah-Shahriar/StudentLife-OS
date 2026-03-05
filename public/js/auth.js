@@ -36,10 +36,10 @@ function togglePw(inputId, btn) {
   if (!input) return;
   if (input.type === 'password') {
     input.type = 'text';
-    btn.textContent = '🙈';
+    btn.style.opacity = '1';
   } else {
     input.type = 'password';
-    btn.textContent = '👁';
+    btn.style.opacity = '0.5';
   }
 }
 
@@ -111,7 +111,12 @@ if (loginForm) {
       localStorage.setItem('sl_token', data.token);
       localStorage.setItem('sl_user', JSON.stringify(data.user));
       localStorage.setItem('sl_session', data.sessionId);
-      window.location.href = '/dashboard';
+      // Show cinematic success animation, then redirect
+      if (typeof window.triggerLoginSuccess === 'function') {
+        window.triggerLoginSuccess(() => { window.location.href = '/dashboard'; });
+      } else {
+        window.location.href = '/dashboard';
+      }
     } catch (err) {
       showError('loginError', err.message);
       setLoading(btn, false);

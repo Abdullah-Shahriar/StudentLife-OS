@@ -10,6 +10,43 @@ const SESSION_ID = localStorage.getItem('sl_session');
 
 if (!TOKEN || !USER) { window.location.href = '/'; }
 
+/* =================================================================
+   GRADING SYSTEM (UIU — United International University)
+   ================================================================= */
+const GRADE_SCALE = [
+  { letter: 'A',  gp: 4.00, min: 90, label: 'Outstanding'   },
+  { letter: 'A-', gp: 3.67, min: 86, label: 'Excellent'     },
+  { letter: 'B+', gp: 3.33, min: 82, label: 'Very Good'     },
+  { letter: 'B',  gp: 3.00, min: 78, label: 'Good'          },
+  { letter: 'B-', gp: 2.67, min: 74, label: 'Above Average' },
+  { letter: 'C+', gp: 2.33, min: 70, label: 'Average'       },
+  { letter: 'C',  gp: 2.00, min: 66, label: 'Below Average' },
+  { letter: 'C-', gp: 1.67, min: 62, label: 'Poor'          },
+  { letter: 'D+', gp: 1.33, min: 58, label: 'Very Poor'     },
+  { letter: 'D',  gp: 1.00, min: 55, label: 'Pass'          },
+  { letter: 'F',  gp: 0.00, min:  0, label: 'Fail'          },
+];
+function pctToGrade(pct)  { return GRADE_SCALE.find(g => pct >= g.min) || GRADE_SCALE[GRADE_SCALE.length - 1]; }
+function calcCGPA(courses) {
+  let tc = 0, tp = 0;
+  (courses || []).forEach(c => {
+    const a = c.assessments || [];
+    if (!a.length) return;
+    const avg = a.reduce((s, x) => s + parseFloat(x.percentage), 0) / a.length;
+    const g   = pctToGrade(avg);
+    const cr  = parseInt(c.credits) || 3;
+    tc += cr; tp += cr * g.gp;
+  });
+  return tc > 0 ? parseFloat((tp / tc).toFixed(2)) : null;
+}
+function calcCourseGrade(course) {
+  const a = course.assessments || [];
+  if (!a.length) return null;
+  const avg = a.reduce((s, x) => s + parseFloat(x.percentage), 0) / a.length;
+  const g = pctToGrade(avg);
+  return { pct: avg, ...g };
+}
+
 // ── API HELPER ──
 async function api(method, path, body) {
   const opts = {
@@ -135,6 +172,22 @@ function init() {
   const topDate = document.getElementById('topDate');
   if (topDate) topDate.textContent = now.toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
 
+  // Semester progress ring animation
+  (function animateSemesterRing() {
+    const ring = document.getElementById('semesterRingFill');
+    if (!ring) return;
+    // Estimate semester Jan 6 – May 9 = 123 days; today = March 6 = 59 days in
+    const semStart = new Date(now.getFullYear(), 0, 6);  // Jan 6
+    const semEnd   = new Date(now.getFullYear(), 4, 9);  // May 9
+    const total = semEnd - semStart;
+    const elapsed = Math.min(Math.max(now - semStart, 0), total);
+    const pct = total > 0 ? elapsed / total : 0;
+    const circ = 2 * Math.PI * 19; // r=19
+    setTimeout(() => {
+      ring.style.strokeDashoffset = (circ * (1 - pct)).toFixed(2);
+    }, 400);
+  })();
+
   loadOverview();
   checkUpcomingReminders();
   setInterval(checkUpcomingReminders, 60000);
@@ -204,8 +257,8 @@ async function loadOverview() {
       } else {
         ovList.innerHTML = todayTodos.slice(0, 6).map(t => `
           <div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--border);">
-            <div onclick="toggleTodo('${t.id}')" style="cursor:pointer;width:16px;height:16px;border-radius:4px;border:2px solid ${t.completed ? 'var(--success)' : 'rgba(255,255,255,0.2)'};background:${t.completed ? 'var(--success)' : 'transparent'};display:flex;align-items:center;justify-content:center;font-size:10px;color:white;flex-shrink:0;">${t.completed ? '✓' : ''}</div>
-            <span style="font-size:13px;${t.completed ? 'text-decoration:line-through;color:var(--text-faint)' : ''};flex:1;">${t.text}</span>
+            <div onclick="toggleTodo('${t.id}')" style="cursor:pointer;width:16px;height:16px;border-radius:4px;border:2px solid ${t.completed ? 'var(--success)' : 'var(--checkbox-border)'};background:${t.completed ? 'var(--success)' : 'transparent'};display:flex;align-items:center;justify-content:center;font-size:10px;color:white;flex-shrink:0;">${t.completed ? '✓' : ''}</div>
+            <span style="font-size:13px;color:var(--text);${t.completed ? 'text-decoration:line-through;opacity:0.5' : ''};flex:1;">${t.text}</span>
             <span class="priority-badge priority-${t.priority}">${t.priority}</span>
           </div>`).join('');
       }
@@ -522,6 +575,8 @@ async function loadCourses() {
   try {
     academicData = await api('GET', '/academic');
     renderCourses();
+    // Re-init bot with fresh data (won't double-greet after first init)
+    if (typeof initCoursesBot === 'function') initCoursesBot();
   } catch (err) { toast('Failed to load courses', 'error'); }
 }
 
@@ -549,6 +604,7 @@ function renderCourses() {
     }
 
     return `
+    const targetGrade = c.targetGP ? GRADE_SCALE.find(g => Math.abs(g.gp - c.targetGP) < 0.01) : null;
     <div class="course-card" style="--course-color:${color};">
       <div class="course-header">
         <span class="course-code" style="background:${color}20;color:${color};">${c.code || '?'}</span>
@@ -567,9 +623,12 @@ function renderCourses() {
         <div class="mini-progress-fill" style="width:${avg || 0}%;background:${color};"></div>
       </div>
       <div class="course-assessments">${assessments.length} assessment${assessments.length !== 1 ? 's' : ''} • ${c.credits || 3} credits</div>
+      ${targetGrade ? `<div class="course-target-badge">🎯 ${targetGrade.letter} (${c.targetGP.toFixed(2)})</div>` : ''}
+      ${avg && targetGrade ? `<div class="course-gpa-progress" style="color:${parseFloat(avg) >= targetGrade.min ? 'var(--success)' : 'var(--warning);'}">${parseFloat(avg) >= targetGrade.min ? '✅ On track' : `⚠️ ${(targetGrade.min - parseFloat(avg)).toFixed(1)}% below target`}</div>` : ''}
       <div class="course-actions">
-        <button class="btn-secondary" style="flex:1;font-size:12px;padding:8px;" onclick="viewCourse('${c.id}')">📊 View Details</button>
-        <button class="btn-primary" style="width:auto;flex:1;font-size:12px;padding:8px;" onclick="openAssessmentModal('${c.id}')">+ Score</button>
+        <button class="btn-secondary" style="flex:1;font-size:11px;padding:7px 6px;" onclick="viewCourse('${c.id}')">&#128202; Details</button>
+        <button class="course-dist-btn" style="flex:1;" onclick="openDistModal('${c.id}')">&#9881; Marks</button>
+        <button class="btn-primary" style="width:auto;flex:1;font-size:11px;padding:7px 6px;" onclick="openAssessmentModal('${c.id}')">+ Score</button>
       </div>
     </div>`;
   }).join('');
@@ -585,6 +644,8 @@ function openCourseModal(id = null) {
       document.getElementById('courseCode').value = c.code || '';
       document.getElementById('courseInstructor').value = c.instructor || '';
       document.getElementById('courseCredits').value = c.credits || 3;
+      const tgp = document.getElementById('courseTargetGP');
+      if (tgp) tgp.value = c.targetGP ? c.targetGP.toFixed(2) : '';
     }
   } else {
     ['courseName','courseCode','courseInstructor'].forEach(id => setInputVal(id, ''));
@@ -596,17 +657,23 @@ function openCourseModal(id = null) {
 async function saveCourse() {
   const name = document.getElementById('courseName').value.trim();
   if (!name) { toast('Course name is required', 'error'); return; }
+  const tgpVal = document.getElementById('courseTargetGP')?.value;
   const payload = {
     name, code: document.getElementById('courseCode').value.trim(),
     instructor: document.getElementById('courseInstructor').value.trim(),
-    credits: parseInt(document.getElementById('courseCredits').value) || 3
+    credits: parseInt(document.getElementById('courseCredits').value) || 3,
+    ...(tgpVal ? { targetGP: parseFloat(tgpVal) } : {})
   };
   try {
     if (editingCourseId) {
       await api('PUT', `/academic/course/${editingCourseId}`, payload);
       toast('Course updated', 'success');
     } else {
-      await api('POST', '/academic/course', payload);
+      const course = await api('POST', '/academic/course', payload);
+      // Server doesn't persist extra fields on POST — do a follow-up PUT
+      if (tgpVal && course?.id) {
+        await api('PUT', `/academic/course/${course.id}`, { targetGP: parseFloat(tgpVal) });
+      }
       toast('Course added', 'success');
     }
     closeModal('courseModal');
@@ -1332,17 +1399,461 @@ function scoreColor(pct) {
   return 'var(--danger)';
 }
 function getLetterGrade(pct) {
-  if (pct >= 90) return 'A+';
-  if (pct >= 85) return 'A';
-  if (pct >= 80) return 'A-';
-  if (pct >= 75) return 'B+';
-  if (pct >= 70) return 'B';
-  if (pct >= 65) return 'B-';
-  if (pct >= 60) return 'C+';
-  if (pct >= 55) return 'C';
-  if (pct >= 50) return 'D';
-  return 'F';
+  return pctToGrade(pct)?.letter || 'F';
 }
+
+// ── CHART THEME — called by dashboard toggleTheme() after mode switch ──
+window.applyChartTheme = function () {
+  const light    = document.body.classList.contains('light-mode');
+  const tickC    = light ? '#55607a' : '#64748b';
+  const gridC    = light ? 'rgba(99,102,241,0.09)' : 'rgba(255,255,255,0.05)';
+  const legendC  = light ? '#55607a' : '#94a3b8';
+
+  const all = [
+    overviewChartInst, gradeDonutInst, overallTrendChartInst, courseDetailChartInst,
+    ...Object.values(courseChartInsts)
+  ].filter(Boolean);
+
+  all.forEach(chart => {
+    try {
+      if (chart.options.plugins?.legend?.labels)
+        chart.options.plugins.legend.labels.color = legendC;
+      ['x', 'y'].forEach(axis => {
+        if (chart.options.scales?.[axis]?.ticks)
+          chart.options.scales[axis].ticks.color = tickC;
+        if (chart.options.scales?.[axis]?.grid)
+          chart.options.scales[axis].grid.color = gridC;
+      });
+      chart.update();
+    } catch (e) { /* chart may have been destroyed */ }
+  });
+};
 
 // ── START ──
 init();
+
+/* =================================================================
+   COURSE BOT ASSISTANT + CGPA CALCULATOR
+   ================================================================= */
+let cbotHistory = [];
+let cbotAwaitingCourseSetup = null;
+let currentDistCourseId = null;
+
+function initCoursesBot() {
+  const msgBox = document.getElementById('cbotMessages');
+  if (!msgBox) return;
+  renderCGPACalc();
+  if (cbotHistory.length > 0) return; // already greeted
+  cbotAppendMsg('bot',
+    `Hey! 👋 I’m your **Course Assistant**. I can help you:\n` +
+    `• 📚 **Add courses** — say “add course [name]”\n` +
+    `• 🎯 **Set targets** — say “set target for [course]”\n` +
+    `• 📊 **Check CGPA** — say “my cgpa” or open the CGPA tab\n` +
+    `• 📈 **Score needed** — say “what do I need in [course] for B+?”\n` +
+    `• ⚙️ **Setup marks** — say “setup distribution for [course]”\n\nWhat would you like to do?`);
+}
+
+function cbotAppendMsg(role, text) {
+  cbotHistory.push({ role, text });
+  const msgBox = document.getElementById('cbotMessages');
+  if (!msgBox) return;
+  const div = document.createElement('div');
+  div.className = `cbot-msg ${role}`;
+  const html = text
+    .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+    .replace(/\*\*(.+?)\*\*/g,'<strong>$1</strong>')
+    .replace(/\n/g,'<br>');
+  div.innerHTML = `<div class="cbot-bubble">${html}</div>`;
+  msgBox.appendChild(div);
+  msgBox.scrollTop = msgBox.scrollHeight;
+}
+
+function handleCBotKey(e) { if (e.key==='Enter' && !e.shiftKey) { e.preventDefault(); sendCBotMsg(); } }
+function cbotQuick(text)   { const i=document.getElementById('cbotInput'); if(i){i.value=text;} sendCBotMsg(); }
+
+function sendCBotMsg() {
+  const inp = document.getElementById('cbotInput');
+  if (!inp) return;
+  const text = inp.value.trim();
+  if (!text) return;
+  inp.value = '';
+  cbotAppendMsg('user', text);
+  if (cbotAwaitingCourseSetup) { handleCbotSetupStep(text); return; }
+  processCBotMessage(text);
+}
+
+function handleCbotSetupStep(text) {
+  const state = cbotAwaitingCourseSetup;
+  if (state.step === 'name') {
+    state.data.name = text; state.step = 'credits';
+    cbotAppendMsg('bot', `Great! **"${escHtml(text)}"** it is.\n\nHow many credit hours? (1–6)`);
+    return;
+  }
+  if (state.step === 'credits') {
+    const cr = parseInt(text);
+    if (isNaN(cr)||cr<1||cr>6) { cbotAppendMsg('bot','Please enter a valid credit count (1–6):'); return; }
+    state.data.credits = cr; state.step = 'targetGP';
+    cbotAppendMsg('bot', `${cr} credits noted! What’s your **target grade point**?\n\nExamples: **4.00** (A), **3.67** (A-), **3.33** (B+), **3.00** (B)\nType a GP or letter grade like “B+”`);
+    return;
+  }
+  if (state.step === 'targetGP') {
+    let gp = null;
+    const lm = GRADE_SCALE.find(g => g.letter.toLowerCase() === text.toLowerCase().trim());
+    if (lm) { gp = lm.gp; } else {
+      const n = parseFloat(text);
+      if (!isNaN(n) && n >= 0 && n <= 4) {
+        gp = GRADE_SCALE.reduce((b,g) => Math.abs(g.gp-n)<Math.abs(b.gp-n)?g:b).gp;
+      }
+    }
+    if (gp === null) { cbotAppendMsg('bot','Enter a grade point like 3.33 or a letter like B+:'); return; }
+    state.data.targetGP = gp;
+    const grade = GRADE_SCALE.find(g=>g.gp===gp);
+    state.step = 'code';
+    cbotAppendMsg('bot', `Target: **${grade?.letter} (${gp.toFixed(2)})** — ${grade?.label}! 🎯\n\nCourse code? (e.g. CSE301) or type **skip**`);
+    return;
+  }
+  if (state.step === 'code') {
+    state.data.code = text.toLowerCase()==='skip'?'':text.toUpperCase();
+    state.step = 'instructor';
+    cbotAppendMsg('bot', `Got it! Instructor name? (or type **skip**)`);
+    return;
+  }
+  if (state.step === 'instructor') {
+    state.data.instructor = text.toLowerCase()==='skip'?'':text;
+    cbotAwaitingCourseSetup = null;
+    const d = state.data;
+    cbotAppendMsg('bot', `Creating **"${escHtml(d.name)}"** (⌛️ one moment…)`);
+    api('POST','/academic/course',{name:d.name,code:d.code,instructor:d.instructor,credits:d.credits})
+      .then(course => api('PUT',`/academic/course/${course.id}`,{targetGP:d.targetGP}))
+      .then(() => {
+        loadCourses();
+        const grade = GRADE_SCALE.find(g=>g.gp===d.targetGP);
+        cbotAppendMsg('bot', `✅ **"${escHtml(d.name)}"** added!\nTarget: **${grade?.letter}** (${d.targetGP.toFixed(2)}) — ${grade?.label}\n\nNow say **“setup distribution for ${escHtml(d.name)}”** so I can track weighted progress accurately!`);
+      })
+      .catch(err => cbotAppendMsg('bot',`❌ Error: ${err.message}`));
+    return;
+  }
+}
+
+function processCBotMessage(msg) {
+  const m = msg.toLowerCase();
+  const courses = academicData?.courses || [];
+
+  // Greeting
+  if (/^(hi|hello|hey|hola|yo)\b/.test(m)) {
+    const cgpa = calcCGPA(courses);
+    cbotAppendMsg('bot', `Hello! 👋 ${cgpa!==null?`Your current CGPA is **${cgpa.toFixed(2)}**.`:`You have ${courses.length} course(s) set up.`}\n\nHow can I help you today?`);
+    return;
+  }
+  // CGPA
+  if (/cgpa|gpa|overall.?grade/.test(m)) {
+    const cgpa = calcCGPA(courses);
+    if (!courses.length) { cbotAppendMsg('bot','No courses yet. Say “add course [name]” to start!'); return; }
+    if (cgpa === null) { cbotAppendMsg('bot',`You have ${courses.length} course(s) but no scores yet. Add some assessments first!`); return; }
+    const breakdown = courses.map(c => {
+      const g = calcCourseGrade(c);
+      return g ? `• **${c.name}**: ${g.pct.toFixed(1)}% → ${g.letter} (${g.gp.toFixed(2)}) — ${g.label}` : `• **${c.name}**: No scores yet`;
+    }).join('\n');
+    cbotAppendMsg('bot', `📊 **Your CGPA: ${cgpa.toFixed(2)} / 4.00**\n\n${breakdown}\n\nOpen the **CGPA tab** for visual details!`);
+    return;
+  }
+  // Add course
+  if (/add.?course|new.?course/.test(m)) {
+    const nameMatch = msg.match(/(?:add|new).*?course\s+[\u201c\"']?([A-Za-z0-9 ]+)[\u201d\"']?/i);
+    const name = nameMatch ? nameMatch[1].trim() : null;
+    if (name && name.length > 1) {
+      cbotAwaitingCourseSetup = { step:'credits', data:{ name } };
+      cbotAppendMsg('bot', `Adding **"${escHtml(name)}"**!\n\nHow many credit hours? (1–6)`);
+    } else {
+      cbotAwaitingCourseSetup = { step:'name', data:{} };
+      cbotAppendMsg('bot', `Sure! What’s the **course name**?`);
+    }
+    return;
+  }
+  // Setup distribution
+  if (/setup|distribution|weight|marks.?dis/.test(m)) {
+    let fc = null;
+    courses.forEach(c => { if (m.includes(c.name.toLowerCase())||(c.code&&m.includes(c.code.toLowerCase()))) fc=c; });
+    if (!fc && courses.length===1) fc=courses[0];
+    if (!fc) {
+      cbotAppendMsg('bot', `Which course? ${courses.length?'\n'+courses.map(c=>`• ${c.name}`).join('\n')+'\n\nSay “setup distribution for [name]”':'\nAdd a course first!'}`);
+      return;
+    }
+    openDistModal(fc.id);
+    cbotAppendMsg('bot', `📝 Opening distribution setup for **${escHtml(fc.name)}**. Fill in each type and its percentage weight!`);
+    return;
+  }
+  // Score needed
+  if (/score|mark.*(need|require)|(what|how).*(need|get|achieve)/.test(m)) {
+    let fc = null;
+    courses.forEach(c => { if (m.includes(c.name.toLowerCase())||(c.code&&m.includes(c.code.toLowerCase()))) fc=c; });
+    if (!fc && courses.length===1) fc=courses[0];
+    if (!fc) { cbotAppendMsg('bot','Which course? Say “what do I need in [course name] for B+?”'); return; }
+    const gradeMatch = GRADE_SCALE.find(g => m.toLowerCase().includes(g.letter.toLowerCase()));
+    const targetGP = gradeMatch?.gp ?? fc.targetGP ?? 3.00;
+    const targetGrade = GRADE_SCALE.find(g => Math.abs(g.gp-targetGP)<0.01) || GRADE_SCALE[2];
+    const current = calcCourseGrade(fc);
+    const assessments = fc.assessments || [];
+    const totalDistWeight = (fc.distribution||[]).reduce((s,d)=>s+d.weight,0);
+    let reply = `📈 **${escHtml(fc.name)}** → Target: **${targetGrade.letter}** (${targetGP.toFixed(2)}) — ${targetGrade.label}\n\n`;
+    if (current) reply += `Current: **${current.pct.toFixed(1)}%** (${current.letter})\n\n`;
+    if (current && current.pct >= targetGrade.min) {
+      reply += `✅ You’re already at or above your target! Great work 🙌`;
+    } else if (totalDistWeight > 0) {
+      const doneWeight = assessments.reduce((s,a) => {
+        const d = (fc.distribution||[]).find(dd=>dd.type.toLowerCase()===a.type.toLowerCase());
+        return s + (d ? d.weight/(d.count||1) : 0);
+      }, 0);
+      const earnedPts = assessments.reduce((s,a) => {
+        const d = (fc.distribution||[]).find(dd=>dd.type.toLowerCase()===a.type.toLowerCase());
+        return s + (d ? (parseFloat(a.percentage)/100)*(d.weight/(d.count||1)) : 0);
+      }, 0);
+      const remWeight = Math.max(0, 100 - doneWeight);
+      if (remWeight <= 0) {
+        reply += `All assessments are complete! Your final score is **${(earnedPts).toFixed(1)}%**.`;
+      } else {
+        const needed = ((targetGrade.min - earnedPts) / remWeight) * 100;
+        if (needed > 100) {
+          const maxScore = earnedPts + remWeight;
+          const maxGrade = pctToGrade(maxScore);
+          reply += `⚠️ To get ${targetGrade.letter} you’d need **${needed.toFixed(1)}%** in remaining work — not possible.\n\n`;
+          reply += `🎯 **Best achievable: ${maxGrade.letter} (${maxGrade.gp.toFixed(2)})** if you score 100% on remaining work.`;
+        } else if (needed <= 0) {
+          reply += `✅ You’re already on track! Keep scoring well.`;
+        } else {
+          reply += `You need **${needed.toFixed(1)}%** on remaining weighted work (${remWeight.toFixed(0)}% weight left) to reach **${targetGrade.letter}**.`;
+        }
+      }
+    } else if (assessments.length > 0) {
+      const totalAssess = Math.max(assessments.length + 1, 5);
+      const rem = totalAssess - assessments.length;
+      const curSum = assessments.reduce((s,a)=>s+parseFloat(a.percentage),0);
+      const needed = (targetGrade.min * totalAssess - curSum) / rem;
+      reply += needed > 100
+        ? `⚠️ You’d need ${needed.toFixed(1)}% on remaining assessments — difficult. Setup marks distribution for precise tracking.`
+        : `You need **~${Math.max(0,needed).toFixed(1)}%** on remaining assessments (estimated). Set up marks distribution for accurate tracking!`;
+    } else {
+      reply += `No scores yet. Add assessments and I’ll calculate exactly what you need!`;
+    }
+    cbotAppendMsg('bot', reply);
+    return;
+  }
+  // Fallback
+  cbotAppendMsg('bot', `I can help with:\n• “my cgpa”\n• “add course [name]”\n• “what score do I need in [course] for [grade]”\n• “setup distribution for [course]”\n\nTry one of these! 😊`);
+}
+
+function switchCBotTab(tab, btn) {
+  document.querySelectorAll('.cbot-tab').forEach(t=>t.classList.remove('active'));
+  document.querySelectorAll('.cbot-pane').forEach(p=>p.classList.remove('active'));
+  btn.classList.add('active');
+  const pane = document.getElementById(`cbot-pane-${tab}`);
+  if (pane) pane.classList.add('active');
+  if (tab==='cgpa') renderCGPACalc();
+}
+
+function renderCGPACalc() {
+  const courses = academicData?.courses || [];
+  const cgpa    = calcCGPA(courses);
+
+  const badge = document.getElementById('cbotCGPABadge');
+  if (badge) badge.textContent = cgpa !== null ? `CGPA: ${cgpa.toFixed(2)}` : 'CGPA: —';
+
+  const arc = document.getElementById('cgpaArcFill');
+  const num = document.getElementById('cgpaBigNum');
+  if (arc && num) {
+    const circ = 172.79;
+    const pct  = cgpa !== null ? Math.min(cgpa/4, 1) : 0;
+    setTimeout(() => { arc.style.strokeDashoffset = (circ*(1-pct)).toFixed(2); }, 300);
+    num.textContent = cgpa !== null ? cgpa.toFixed(2) : '—';
+  }
+
+  const bd = document.getElementById('cgpaBreakdown');
+  if (bd) {
+    bd.innerHTML = courses.map(c => {
+      const g = calcCourseGrade(c);
+      const col = g ? (g.gp>=3.33?'var(--success)':g.gp>=2?'var(--warning)':'var(--danger)') : 'var(--text-faint)';
+      return `<div class="cgpa-course-row">
+        <div class="cgpa-course-name">${escHtml(c.name)}</div>
+        <div class="cgpa-course-letter" style="color:${col};background:${col}18">${g?g.letter:'—'}</div>
+        <div class="cgpa-course-gp" style="color:${col}">${g?g.gp.toFixed(2):'—'}</div>
+      </div>`;
+    }).join('') || '<div style="color:var(--text-faint);font-size:12px;text-align:center;padding:8px;">Add courses and scores to see breakdown</div>';
+  }
+
+  const tbl = document.getElementById('gradeScaleTbl');
+  if (tbl && !tbl.children.length) {
+    tbl.innerHTML = GRADE_SCALE.map((g,i) => {
+      const maxPct = i===0 ? 100 : (GRADE_SCALE[i-1].min - 1);
+      return `<div class="grade-row">
+        <span class="g-letter">${g.letter}</span>
+        <span class="g-gp">${g.gp.toFixed(2)}</span>
+        <span class="g-range">${g.min}–${maxPct}%</span>
+      </div>`;
+    }).join('');
+  }
+
+  const wr = document.getElementById('cgpaWhatIfRows');
+  if (wr) {
+    const opts = GRADE_SCALE.map(g=>`<option value="${g.gp}">${g.letter} – ${g.gp.toFixed(2)}</option>`).join('');
+    wr.innerHTML = courses.map(c => {
+      const g = calcCourseGrade(c);
+      return `<div class="cgpa-whatif-row">
+        <span class="wif-course">${escHtml(c.name)}</span>
+        <select id="wif-${c.id}">${opts}</select>
+      </div>`;
+    }).join('') || '<div style="color:var(--text-faint);font-size:12px;padding:4px;">Add courses first</div>';
+    courses.forEach(c => {
+      const sel = document.getElementById(`wif-${c.id}`);
+      const g   = calcCourseGrade(c);
+      if (sel) sel.value = g ? g.gp.toFixed(2) : '3.00';
+    });
+  }
+}
+
+function calcWhatIfCGPA() {
+  const courses = academicData?.courses || [];
+  const el = document.getElementById('cgpaWhatIfResult');
+  if (!courses.length) { if(el){el.style.display='block';el.textContent='Add courses first!';} return; }
+  let tc=0, tp=0;
+  courses.forEach(c => {
+    const sel = document.getElementById(`wif-${c.id}`);
+    const gp  = sel ? parseFloat(sel.value) : 3.00;
+    const cr  = parseInt(c.credits) || 3;
+    tc += cr; tp += cr*gp;
+  });
+  const wif   = tc > 0 ? (tp/tc).toFixed(2) : '—';
+  const grade = pctToGrade(parseFloat(wif)/4*100);
+  if (el) { el.style.display='block'; el.innerHTML=`What-If CGPA: <strong>${wif}</strong> / 4.00 &nbsp;·&nbsp; ${grade?.letter||'—'} — ${grade?.label||''}`; }
+}
+
+/* ── MARKS DISTRIBUTION MODAL ── */
+function openDistModal(courseId) {
+  if (!courseId) {
+    // Called from header button — open for first course, or show selector
+    const courses = academicData?.courses || [];
+    if (!courses.length) { toast('Add a course first!','info'); return; }
+    if (courses.length === 1) { courseId = courses[0].id; }
+    else {
+      const names = courses.map((c,i)=>`${i+1}. ${c.name}`).join('\n');
+      const idx = parseInt(prompt(`Which course?\n${names}\n\nEnter number:`));
+      if (isNaN(idx)||idx<1||idx>courses.length) return;
+      courseId = courses[idx-1].id;
+    }
+  }
+  currentDistCourseId = courseId;
+  const course = (academicData?.courses||[]).find(c=>c.id===courseId);
+  if (!course) return;
+
+  document.getElementById('distModalTitle').textContent = `Marks Distribution — ${course.name}`;
+  document.getElementById('distCourseInfo').innerHTML =
+    `<strong>${escHtml(course.name)}</strong> &nbsp;·&nbsp; ${course.code||'No code'} &nbsp;·&nbsp; ${course.credits||3} credits`+
+    `<span style="float:right;color:var(--text-muted);">${(course.assessments||[]).length} assessments recorded</span>`;
+
+  const tgpSel = document.getElementById('distTargetGP');
+  if (tgpSel) { tgpSel.value = course.targetGP ? course.targetGP.toFixed(2) : ''; updateDistTargetLabel(); }
+
+  const distRows = document.getElementById('distRows');
+  distRows.innerHTML = '';
+  const dist = (course.distribution&&course.distribution.length)
+    ? course.distribution
+    : [{type:'Midterm',weight:30,count:1},{type:'Final Exam',weight:40,count:1},{type:'Quiz',weight:15,count:5},{type:'Assignment',weight:15,count:3}];
+  dist.forEach(d => addDistRow(d));
+  updateDistTotal();
+
+  // Reset file preview
+  const fp = document.getElementById('distFilePreview'); if(fp){fp.style.display='none';fp.innerHTML='';}
+  document.getElementById('distUploadArea').innerHTML = `<svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg><p>Upload your course syllabus or marks breakdown</p><span>Click to browse — image or PDF</span>`;
+
+  openModal('distModal');
+}
+
+function openDistModalForCourse() {
+  const id = editingCourseId || (academicData?.courses?.[0]?.id);
+  if (id) openDistModal(id);
+  else toast('Save the course first, then set up distribution.','info');
+}
+
+function addDistRow(data = {}) {
+  const rows = document.getElementById('distRows');
+  const row  = document.createElement('div');
+  row.className = 'dist-row';
+  row.innerHTML = `
+    <input type="text"   placeholder="e.g. Midterm"  value="${escHtml(data.type||'')}" oninput="updateDistTotal()" />
+    <input type="number" placeholder="Count" min="1" max="50" value="${data.count||1}" oninput="updateDistTotal()" style="width:60px;" />
+    <input type="number" placeholder="0" min="0" max="100" step="0.5" value="${data.weight||''}" oninput="updateDistTotal()" style="width:65px;" />
+    <span class="dist-pct">%</span>
+    <button class="dist-del" onclick="this.closest('.dist-row').remove();updateDistTotal();" title="Remove">✕</button>`;
+  rows.appendChild(row);
+  updateDistTotal();
+}
+
+function updateDistTotal() {
+  let total = 0;
+  document.querySelectorAll('#distRows .dist-row').forEach(r => {
+    total += parseFloat(r.querySelectorAll('input')[2]?.value) || 0;
+  });
+  const te = document.getElementById('distTotal');
+  const se = document.getElementById('distTotalStatus');
+  if (te) te.textContent = total.toFixed(0);
+  if (se) {
+    if (Math.abs(total-100)<0.5) { se.textContent='✓ Perfect'; se.className='dist-status ok'; }
+    else if (total>100)           { se.textContent=`+${(total-100).toFixed(0)}% over`; se.className='dist-status err'; }
+    else                          { se.textContent=`${(100-total).toFixed(0)}% remaining`; se.className='dist-status err'; }
+  }
+}
+
+function updateDistTargetLabel() {
+  const sel = document.getElementById('distTargetGP');
+  const lbl = document.getElementById('distTargetLabel');
+  if (!sel||!lbl) return;
+  const gp    = parseFloat(sel.value);
+  const grade = isNaN(gp) ? null : GRADE_SCALE.find(g=>Math.abs(g.gp-gp)<0.01);
+  lbl.textContent = grade ? `→ ${grade.letter} · ${grade.label}` : '—';
+}
+
+async function saveDistribution() {
+  const course = (academicData?.courses||[]).find(c=>c.id===currentDistCourseId);
+  if (!course) return;
+  const targetGP = parseFloat(document.getElementById('distTargetGP').value) || null;
+  const distribution = [];
+  document.querySelectorAll('#distRows .dist-row').forEach(r => {
+    const inputs = r.querySelectorAll('input');
+    const type   = inputs[0]?.value.trim();
+    const count  = parseInt(inputs[1]?.value) || 1;
+    const weight = parseFloat(inputs[2]?.value) || 0;
+    if (type && weight > 0) distribution.push({ type, count, weight });
+  });
+  const total = distribution.reduce((s,d)=>s+d.weight, 0);
+  if (Math.abs(total-100)>2) { toast('Weights must total 100%','error'); return; }
+  try {
+    await api('PUT', `/academic/course/${currentDistCourseId}`, { targetGP, distribution });
+    academicData.courses = academicData.courses.map(c=>
+      c.id===currentDistCourseId ? {...c, targetGP, distribution} : c);
+    closeModal('distModal');
+    renderCourses();
+    renderCGPACalc();
+    toast('Distribution saved!','success');
+    const grade = targetGP ? GRADE_SCALE.find(g=>Math.abs(g.gp-targetGP)<0.01) : null;
+    cbotAppendMsg('bot', `✅ Distribution saved for **${escHtml(course.name)}**!${grade?` Target: **${grade.letter}** (${targetGP.toFixed(2)})`:''} I’ll now track your weighted progress after each assessment!`);
+  } catch(err) { toast(err.message,'error'); }
+}
+
+function handleDistUpload(e) {
+  const file = e.target.files[0];
+  if (!file) return;
+  const area    = document.getElementById('distUploadArea');
+  const preview = document.getElementById('distFilePreview');
+  if (file.type.startsWith('image/')) {
+    const reader = new FileReader();
+    reader.onload = ev => {
+      preview.style.display = 'block';
+      preview.innerHTML = `<img src="${ev.target.result}" style="max-width:100%;max-height:180px;border-radius:8px;border:1px solid var(--border);" alt="Distribution sheet"/>
+        <div style="font-size:11px;color:var(--text-muted);margin-top:5px;">📷 Fill in the weights below based on this sheet</div>`;
+    };
+    reader.readAsDataURL(file);
+  } else {
+    preview.style.display = 'block';
+    preview.innerHTML = `<div style="padding:8px;background:rgba(99,102,241,0.09);border-radius:6px;font-size:12px;">📄 ${escHtml(file.name)}<br><span style="color:var(--text-muted);">PDF loaded — fill in the weights below</span></div>`;
+  }
+  if (area) area.innerHTML = `<div style="color:var(--success);font-size:13px;">✓ File loaded — fill in the weights below</div>`;
+}

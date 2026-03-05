@@ -140,6 +140,63 @@ router.get('/profile', auth, (req, res) => {
   res.json(safe);
 });
 
+// DEMO LOGIN — auto-creates a pre-seeded demo account and returns a JWT
+const DEMO_EMAIL = 'demo@studentlife.os';
+const DEMO_NAME  = 'Abdul Shahriar';
+const DEMO_PASS  = 'demoSL2026!';
+
+router.post('/demo-login', async (req, res) => {
+  try {
+    let users = getUsers();
+    let user  = users.find(u => u.email === DEMO_EMAIL);
+
+    if (!user) {
+      const hashed = await bcrypt.hash(DEMO_PASS, 10);
+      user = {
+        id: 'demo-student-001', email: DEMO_EMAIL,
+        name: DEMO_NAME, phone: '+880 1700 000000',
+        password: hashed, createdAt: new Date().toISOString(), isDemo: true
+      };
+      users.push(user);
+      saveUsers(users);
+
+      const dir = getUserDir(DEMO_EMAIL);
+      const demoCourses = [
+        { id:'dc1', name:'Machine Learning', code:'CSE4401', instructor:'Dr. Rahman', credits:3,
+          targetGP:3.67,
+          distribution:[{type:'Midterm',weight:30,count:1},{type:'Final',weight:40,count:1},{type:'Quiz',weight:15,count:5},{type:'Assignment',weight:15,count:3}],
+          assessments:[
+            {id:'da1',type:'quiz',title:'Quiz 1',score:17,totalScore:20,date:'2026-01-25',weight:5,percentage:'85.00',addedAt:new Date().toISOString()},
+            {id:'da2',type:'classtest',title:'CT 1',score:18,totalScore:20,date:'2026-02-10',weight:10,percentage:'90.00',addedAt:new Date().toISOString()}
+          ], createdAt:new Date().toISOString() },
+        { id:'dc2', name:'Computer Networks', code:'CSE4301', instructor:'Dr. Islam', credits:3,
+          targetGP:3.00,
+          distribution:[{type:'Midterm',weight:30,count:1},{type:'Final',weight:40,count:1},{type:'Quiz',weight:20,count:5},{type:'Lab',weight:10,count:4}],
+          assessments:[
+            {id:'da3',type:'quiz',title:'Quiz 1',score:14,totalScore:20,date:'2026-01-22',weight:5,percentage:'70.00',addedAt:new Date().toISOString()}
+          ], createdAt:new Date().toISOString() },
+        { id:'dc3', name:'Software Engineering', code:'CSE4201', instructor:'Dr. Hossain', credits:3,
+          targetGP:3.33, distribution:[], assessments:[], createdAt:new Date().toISOString() }
+      ];
+      fs.writeJsonSync(path.join(dir,'todos.json'),[
+        {id:'t1',text:'Submit ML Assignment 3',priority:'high',done:false,dueDate:'2026-03-10',category:'assignment',createdAt:new Date().toISOString()},
+        {id:'t2',text:'Prepare Networks Lab Report',priority:'medium',done:false,dueDate:'2026-03-12',category:'assignment',createdAt:new Date().toISOString()},
+        {id:'t3',text:'Study for Compiler Design CT',priority:'high',done:true,dueDate:'2026-03-06',category:'exam',createdAt:new Date().toISOString()}
+      ],{spaces:2});
+      fs.writeJsonSync(path.join(dir,'academic.json'),{courses:demoCourses,calendar:[]},{spaces:2});
+      fs.writeJsonSync(path.join(dir,'reminders.json'),[],{spaces:2});
+      fs.writeJsonSync(path.join(dir,'dayplans.json'),{},{spaces:2});
+      fs.writeJsonSync(path.join(dir,'sessions.json'),[],{spaces:2});
+    }
+
+    const token = jwt.sign({id:user.id,email:user.email,name:user.name}, SECRET, {expiresIn:'6h'});
+    const sessionId = 'demo-' + Date.now();
+    res.json({ token, user:{id:user.id,email:user.email,name:user.name,phone:user.phone}, sessionId });
+  } catch(err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 module.exports = router;
 module.exports.auth = auth;
 module.exports.getUserDir = getUserDir;
