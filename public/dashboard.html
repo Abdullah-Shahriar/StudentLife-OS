@@ -1,0 +1,671 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>StudentLife OS – Dashboard</title>
+  <link rel="stylesheet" href="css/main.css" />
+  <link rel="stylesheet" href="css/dashboard.css" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Space+Grotesk:wght@400;600;700&display=swap" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+</head>
+<body class="dashboard-page">
+<div id="toast-container"></div>
+<div class="mobile-overlay" id="mobileOverlay" onclick="closeSidebar()"></div>
+
+<!-- ════════════ SIDEBAR ════════════ -->
+<aside class="sidebar" id="sidebar">
+  <div class="sidebar-header">
+    <svg class="sidebar-brand-icon" viewBox="0 0 40 40" fill="none">
+      <circle cx="20" cy="20" r="20" fill="url(#sg1)"/>
+      <path d="M12 20L17 25L28 14" stroke="white" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+      <defs>
+        <linearGradient id="sg1" x1="0" y1="0" x2="40" y2="40">
+          <stop offset="0%" stop-color="#6366f1"/>
+          <stop offset="100%" stop-color="#06b6d4"/>
+        </linearGradient>
+      </defs>
+    </svg>
+    <div class="sidebar-brand-text">
+      <h2>StudentLife <span class="highlight">OS</span></h2>
+      <span>Academic Command Center</span>
+    </div>
+  </div>
+
+  <nav class="sidebar-nav">
+    <span class="nav-section-label">Main</span>
+    <button class="nav-item active" onclick="showPage('overview', this)">
+      <span class="nav-icon">🏠</span> Overview
+    </button>
+    <button class="nav-item" onclick="showPage('todo', this)">
+      <span class="nav-icon">✅</span> Todo List
+      <span class="nav-badge" id="todoBadge">0</span>
+    </button>
+    <button class="nav-item" onclick="showPage('planner', this)">
+      <span class="nav-icon">📅</span> Day Planner
+    </button>
+
+    <span class="nav-section-label">Academics</span>
+    <button class="nav-item" onclick="showPage('courses', this)">
+      <span class="nav-icon">📚</span> My Courses
+    </button>
+    <button class="nav-item" onclick="showPage('grades', this)">
+      <span class="nav-icon">📊</span> Grades & Stats
+    </button>
+    <button class="nav-item" onclick="showPage('calendar', this)">
+      <span class="nav-icon">🗓</span> Academic Calendar
+    </button>
+
+    <span class="nav-section-label">Tools</span>
+    <button class="nav-item" onclick="showPage('reminders', this)">
+      <span class="nav-icon">⏰</span> Reminders
+      <span class="nav-badge" id="reminderBadge">0</span>
+    </button>
+    <button class="nav-item" onclick="showPage('bot', this)">
+      <span class="nav-icon">🤖</span> AI Assistant
+    </button>
+  </nav>
+
+  <div class="sidebar-footer">
+    <div class="user-profile-mini" onclick="showPage('profile', document.querySelector('[data-page=profile]'))">
+      <div class="user-avatar" id="userAvatarSidebar">?</div>
+      <div class="user-info-mini">
+        <div class="user-name" id="userNameSidebar">Loading...</div>
+        <div class="user-email" id="userEmailSidebar">...</div>
+      </div>
+      <button class="logout-btn" onclick="event.stopPropagation(); logout()" title="Logout">⏻</button>
+    </div>
+  </div>
+</aside>
+
+<!-- ════════════ MAIN CONTENT ════════════ -->
+<main class="main-content">
+  <!-- TOP BAR -->
+  <header class="top-bar">
+    <div style="display:flex;align-items:center;gap:14px;">
+      <button onclick="toggleSidebar()" style="display:none;background:rgba(255,255,255,0.07);border:1px solid var(--border);border-radius:9px;color:var(--text);width:38px;height:38px;cursor:pointer;font-size:18px;" id="menuBtn">☰</button>
+      <div class="top-bar-left">
+        <h2 id="pageTitle">Overview</h2>
+        <div class="date-str" id="topDate"></div>
+      </div>
+    </div>
+    <div class="top-bar-right">
+      <button class="notification-btn" onclick="showPage('reminders', document.querySelector('.nav-item:nth-child(8)'))" title="Reminders">
+        🔔 <div class="notif-dot" id="notifDot" style="display:none;"></div>
+      </button>
+      <div class="user-avatar" id="userAvatarTop" style="cursor:pointer;" onclick="showPage('overview', document.querySelector('.nav-item'))">?</div>
+    </div>
+  </header>
+
+  <!-- ═══ OVERVIEW PAGE ═══ -->
+  <div class="page active" id="page-overview">
+    <div class="section-header">
+      <div>
+        <h3>Good <span id="greetingTime">morning</span>, <span id="greetingName">there</span>! 👋</h3>
+        <p>Here's what's happening today</p>
+      </div>
+      <button class="btn-secondary" onclick="showPage('planner', document.querySelector('.nav-item:nth-child(4)'))">📅 Plan Today</button>
+    </div>
+
+    <div class="stats-row">
+      <div class="stat-card" style="--stat-color:#6366f1">
+        <div class="stat-icon">✅</div>
+        <div class="stat-value" id="ovTodayTasks">0</div>
+        <div class="stat-label">Tasks Today</div>
+      </div>
+      <div class="stat-card" style="--stat-color:#10b981">
+        <div class="stat-icon">✔</div>
+        <div class="stat-value" id="ovDoneTasks">0</div>
+        <div class="stat-label">Completed Today</div>
+      </div>
+      <div class="stat-card" style="--stat-color:#06b6d4">
+        <div class="stat-icon">📚</div>
+        <div class="stat-value" id="ovCourses">0</div>
+        <div class="stat-label">Enrolled Courses</div>
+      </div>
+      <div class="stat-card" style="--stat-color:#f472b6">
+        <div class="stat-icon">📊</div>
+        <div class="stat-value" id="ovAvg">—</div>
+        <div class="stat-label">Overall Average</div>
+      </div>
+      <div class="stat-card" style="--stat-color:#f59e0b">
+        <div class="stat-icon">⏰</div>
+        <div class="stat-value" id="ovReminders">0</div>
+        <div class="stat-label">Upcoming Events</div>
+      </div>
+    </div>
+
+    <!-- Quick overview chart -->
+    <div class="chart-grid">
+      <div class="chart-card" style="grid-column: span 2;">
+        <h4>📈 Overall Academic Progress</h4>
+        <div class="chart-wrap"><canvas id="overviewChart"></canvas></div>
+      </div>
+      <div class="chart-card">
+        <h4>📋 Today's Tasks</h4>
+        <div id="ovTodoList" style="max-height:200px;overflow-y:auto;"></div>
+      </div>
+    </div>
+
+    <!-- Upcoming reminders -->
+    <div>
+      <div class="section-header" style="margin-bottom:14px;">
+        <h3 style="font-size:15px;">⏰ Upcoming Reminders</h3>
+        <button class="btn-secondary" onclick="showPage('reminders', document.querySelector('.nav-item:nth-child(8)'))">View All</button>
+      </div>
+      <div id="ovRemindersList"></div>
+    </div>
+  </div>
+
+  <!-- ═══ TODO PAGE ═══ -->
+  <div class="page" id="page-todo">
+    <div class="section-header">
+      <div>
+        <h3>✅ Todo List</h3>
+        <p>Manage your tasks and stay on track</p>
+      </div>
+      <button class="btn-primary" style="width:auto;padding:10px 20px;" onclick="openTodoModal()">+ Add Task</button>
+    </div>
+
+    <div class="todo-controls">
+      <button class="todo-filter-btn active" onclick="filterTodos('all', this)">All</button>
+      <button class="todo-filter-btn" onclick="filterTodos('today', this)">Today</button>
+      <button class="todo-filter-btn" onclick="filterTodos('pending', this)">Pending</button>
+      <button class="todo-filter-btn" onclick="filterTodos('completed', this)">Completed</button>
+      <button class="todo-filter-btn" onclick="filterTodos('high', this)">🔴 High Priority</button>
+      <div style="flex:1;"></div>
+      <input type="date" id="todoDateFilter" style="padding:8px 12px;background:rgba(255,255,255,0.06);border:1px solid var(--border);border-radius:9px;color:var(--text);font-size:13px;outline:none;" onchange="filterTodos('date', document.querySelector('.todo-filter-btn.active'))">
+    </div>
+
+    <div class="todo-list" id="todoList">
+      <div style="text-align:center;color:var(--text-faint);padding:40px;font-size:14px;">
+        Loading tasks...
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══ DAY PLANNER ═══ -->
+  <div class="page" id="page-planner">
+    <div class="section-header">
+      <div>
+        <h3>📅 Day Planner</h3>
+        <p>Plan your day, check off tasks as you go</p>
+      </div>
+      <button class="btn-primary" style="width:auto;padding:10px 20px;" onclick="addPlannerTask()">+ Add Task</button>
+    </div>
+
+    <div style="display:flex;align-items:center;gap:16px;flex-wrap:wrap;">
+      <div class="planner-date-nav">
+        <button onclick="changePlannerDate(-1)">←</button>
+        <div class="planner-date-display" id="plannerDateDisplay">Today</div>
+        <button onclick="changePlannerDate(1)">→</button>
+      </div>
+      <button class="btn-secondary" onclick="goToPlannerToday()">Today</button>
+    </div>
+
+    <div style="background:rgba(255,255,255,0.03);border:1px solid var(--border);border-radius:var(--radius);padding:20px;">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;">
+        <div>
+          <div style="font-size:14px;font-weight:600;" id="plannerHeading">Today's Plan</div>
+          <div style="font-size:12px;color:var(--text-muted);margin-top:3px;" id="plannerProgress">0 / 0 tasks done</div>
+        </div>
+        <div style="width:80px;height:6px;background:rgba(255,255,255,0.08);border-radius:10px;overflow:hidden;">
+          <div id="plannerProgressBar" style="height:100%;width:0%;background:linear-gradient(90deg,var(--primary),var(--secondary));border-radius:10px;transition:width 0.4s ease;"></div>
+        </div>
+      </div>
+
+      <div id="plannerNoteArea" style="margin-bottom:16px;">
+        <textarea id="plannerNote" placeholder="Notes for this day..." rows="2" style="resize:none;" onblur="savePlannerNote()"></textarea>
+      </div>
+
+      <div id="plannerTaskList"></div>
+
+      <div style="display:flex;gap:10px;margin-top:12px;">
+        <input type="text" id="plannerTaskInput" placeholder="Add a new task for the day..." style="flex:1;padding:11px 14px;background:rgba(255,255,255,0.06);border:1px solid var(--border);border-radius:var(--radius-sm);color:var(--text);font-size:14px;outline:none;" onkeydown="if(event.key==='Enter')addPlannerTask()">
+        <button class="btn-primary" style="width:auto;padding:11px 20px;" onclick="addPlannerTask()">Add</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══ COURSES PAGE ═══ -->
+  <div class="page" id="page-courses">
+    <div class="section-header">
+      <div>
+        <h3>📚 My Courses</h3>
+        <p>Manage your enrolled courses and track assessments</p>
+      </div>
+      <button class="btn-primary" style="width:auto;padding:10px 20px;" onclick="openCourseModal()">+ Add Course</button>
+    </div>
+    <div class="courses-grid" id="coursesGrid">
+      <div style="text-align:center;color:var(--text-faint);padding:40px;font-size:14px;grid-column:1/-1;">
+        Loading courses...
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══ GRADES PAGE ═══ -->
+  <div class="page" id="page-grades">
+    <div class="section-header">
+      <div>
+        <h3>📊 Grades & Statistics</h3>
+        <p>Track your performance across all courses</p>
+      </div>
+    </div>
+
+    <!-- Overall progress card -->
+    <div style="background:linear-gradient(135deg,rgba(99,102,241,0.15),rgba(6,182,212,0.08));border:1px solid rgba(99,102,241,0.25);border-radius:var(--radius);padding:24px;display:flex;align-items:center;gap:24px;flex-wrap:wrap;">
+      <div>
+        <div style="font-size:12px;text-transform:uppercase;letter-spacing:1px;color:var(--text-muted);font-weight:600;">Overall Average</div>
+        <div style="font-family:var(--font-display);font-size:48px;font-weight:800;line-height:1;margin-top:4px;" id="gradeOverallAvg">—</div>
+      </div>
+      <div style="width:1px;height:60px;background:var(--border);"></div>
+      <div>
+        <div style="font-size:12px;text-transform:uppercase;letter-spacing:1px;color:var(--text-muted);font-weight:600;">Letter Grade</div>
+        <div style="font-family:var(--font-display);font-size:48px;font-weight:800;line-height:1;margin-top:4px;background:linear-gradient(135deg,var(--primary-light),var(--secondary));-webkit-background-clip:text;-webkit-text-fill-color:transparent;" id="gradeLetterGrade">—</div>
+      </div>
+      <div style="width:1px;height:60px;background:var(--border);"></div>
+      <div>
+        <div style="font-size:12px;text-transform:uppercase;letter-spacing:1px;color:var(--text-muted);font-weight:600;">Total Assessments</div>
+        <div style="font-family:var(--font-display);font-size:48px;font-weight:800;line-height:1;margin-top:4px;" id="gradeTotalAssess">0</div>
+      </div>
+      <div style="flex:1;min-width:200px;">
+        <canvas id="gradeDonutChart" style="max-height:120px;"></canvas>
+      </div>
+    </div>
+
+    <!-- Overall trend chart -->
+    <div class="chart-card">
+      <h4>📈 Overall Progress Over Time</h4>
+      <div class="chart-wrap" style="height:260px;"><canvas id="overallTrendChart"></canvas></div>
+    </div>
+
+    <!-- Per-course charts -->
+    <div class="chart-grid" id="courseChartsGrid"></div>
+
+    <!-- Assessments table -->
+    <div>
+      <div class="section-header" style="margin-bottom:14px;">
+        <h3 style="font-size:15px;">📋 All Assessments</h3>
+        <select id="assessCourseFilter" onchange="renderAssessmentsTable()" style="max-width:200px;padding:8px 12px;font-size:13px;">
+          <option value="all">All Courses</option>
+        </select>
+      </div>
+      <div id="assessmentsList"></div>
+    </div>
+  </div>
+
+  <!-- ═══ CALENDAR PAGE ═══ -->
+  <div class="page" id="page-calendar">
+    <div class="section-header">
+      <div>
+        <h3>🗓 Academic Calendar</h3>
+        <p>Track all your important dates</p>
+      </div>
+      <button class="btn-primary" style="width:auto;padding:10px 20px;" onclick="openCalendarEventModal()">+ Add Event</button>
+    </div>
+
+    <div style="display:flex;align-items:center;gap:16px;margin-bottom:20px;">
+      <button onclick="changeCalendarMonth(-1)" style="width:36px;height:36px;background:rgba(255,255,255,0.06);border:1px solid var(--border);border-radius:9px;color:var(--text);cursor:pointer;font-size:16px;">←</button>
+      <div style="font-size:16px;font-weight:700;min-width:160px;text-align:center;" id="calMonthLabel">Month Year</div>
+      <button onclick="changeCalendarMonth(1)" style="width:36px;height:36px;background:rgba(255,255,255,0.06);border:1px solid var(--border);border-radius:9px;color:var(--text);cursor:pointer;font-size:16px;">→</button>
+      <button class="btn-secondary" onclick="goToCalendarToday()">Today</button>
+    </div>
+
+    <div style="background:rgba(255,255,255,0.02);border:1px solid var(--border);border-radius:var(--radius);padding:16px;">
+      <div class="calendar-grid">
+        <div class="cal-header">Sun</div>
+        <div class="cal-header">Mon</div>
+        <div class="cal-header">Tue</div>
+        <div class="cal-header">Wed</div>
+        <div class="cal-header">Thu</div>
+        <div class="cal-header">Fri</div>
+        <div class="cal-header">Sat</div>
+      </div>
+      <div class="calendar-grid" id="calGrid"></div>
+    </div>
+
+    <div>
+      <div style="font-size:15px;font-weight:600;margin-bottom:12px;">📌 Upcoming Events</div>
+      <div id="calEventList"></div>
+    </div>
+  </div>
+
+  <!-- ═══ REMINDERS PAGE ═══ -->
+  <div class="page" id="page-reminders">
+    <div class="section-header">
+      <div>
+        <h3>⏰ Reminders</h3>
+        <p>Never miss an exam or deadline</p>
+      </div>
+      <button class="btn-primary" style="width:auto;padding:10px 20px;" onclick="openReminderModal()">+ Add Reminder</button>
+    </div>
+
+    <div class="todo-controls" style="margin-bottom:4px;">
+      <button class="todo-filter-btn active" onclick="filterReminders('upcoming', this)">Upcoming</button>
+      <button class="todo-filter-btn" onclick="filterReminders('all', this)">All</button>
+      <button class="todo-filter-btn" onclick="filterReminders('exam', this)">Exams</button>
+      <button class="todo-filter-btn" onclick="filterReminders('assignment', this)">Assignments</button>
+    </div>
+
+    <div id="remindersList" style="display:flex;flex-direction:column;gap:8px;"></div>
+  </div>
+
+  <!-- ═══ BOT PAGE ═══ -->
+  <div class="page" id="page-bot">
+    <div class="section-header">
+      <div>
+        <h3>🤖 AI Assistant</h3>
+        <p>Your personal academic companion</p>
+      </div>
+    </div>
+
+    <div class="chat-container">
+      <div class="chat-header">
+        <div class="bot-avatar">🤖</div>
+        <div>
+          <div style="font-size:14px;font-weight:600;">StudyBot</div>
+          <div style="font-size:12px;color:var(--success);display:flex;align-items:center;gap:5px;">
+            <div style="width:6px;height:6px;background:var(--success);border-radius:50%;"></div>
+            Online
+          </div>
+        </div>
+        <div style="margin-left:auto;font-size:12px;color:var(--text-muted);">Ask me anything about your academics!</div>
+      </div>
+
+      <div class="chat-messages" id="chatMessages"></div>
+
+      <div class="chat-input-area">
+        <textarea class="chat-input" id="chatInput" placeholder="Ask about grades, tasks, reminders... (Enter to send)" rows="1"
+          onkeydown="handleChatKey(event)" oninput="autoResizeChat(this)"></textarea>
+        <button class="chat-send-btn" onclick="sendChatMessage()">➤</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══ PROFILE PAGE (hidden) ═══ -->
+  <div class="page" id="page-profile">
+    <div class="section-header">
+      <h3>👤 My Profile</h3>
+    </div>
+    <div style="max-width:500px;">
+      <div class="chart-card">
+        <div style="display:flex;align-items:center;gap:18px;margin-bottom:20px;">
+          <div class="user-avatar" id="profileAvatar" style="width:64px;height:64px;font-size:24px;">?</div>
+          <div>
+            <div style="font-size:20px;font-weight:700;" id="profileName">—</div>
+            <div style="font-size:13px;color:var(--text-muted);" id="profileEmail">—</div>
+          </div>
+        </div>
+        <div style="display:grid;gap:12px;">
+          <div class="log-detail"><div class="lbl">Phone</div><div class="val" id="profilePhone">—</div></div>
+          <div class="log-detail"><div class="lbl">Member Since</div><div class="val" id="profileJoined">—</div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</main>
+
+<!-- ════════════ MODALS ════════════ -->
+
+<!-- ADD TODO MODAL -->
+<div class="modal-overlay hidden" id="todoModal">
+  <div class="modal">
+    <div class="modal-header">
+      <h3 id="todoModalTitle">Add Task</h3>
+      <button class="modal-close" onclick="closeModal('todoModal')">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-group">
+        <label>Task</label>
+        <div class="input-wrap"><span class="input-icon">✅</span>
+          <input type="text" id="todoText" placeholder="What needs to be done?" />
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label>Date</label>
+          <input type="date" id="todoDate" />
+        </div>
+        <div class="form-group">
+          <label>Priority</label>
+          <select id="todoPriority">
+            <option value="low">🟢 Low</option>
+            <option value="medium" selected>🟡 Medium</option>
+            <option value="high">🔴 High</option>
+          </select>
+        </div>
+      </div>
+      <div class="form-group">
+        <label>Category</label>
+        <select id="todoCategory">
+          <option value="general">General</option>
+          <option value="study">📖 Study</option>
+          <option value="assignment">📝 Assignment</option>
+          <option value="exam">📋 Exam Prep</option>
+          <option value="personal">🙋 Personal</option>
+          <option value="project">🛠 Project</option>
+        </select>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-secondary" onclick="closeModal('todoModal')">Cancel</button>
+      <button class="btn-primary" style="width:auto;padding:10px 24px;" onclick="saveTodo()">Save Task</button>
+    </div>
+  </div>
+</div>
+
+<!-- ADD COURSE MODAL -->
+<div class="modal-overlay hidden" id="courseModal">
+  <div class="modal">
+    <div class="modal-header">
+      <h3 id="courseModalTitle">Add Course</h3>
+      <button class="modal-close" onclick="closeModal('courseModal')">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-row">
+        <div class="form-group">
+          <label>Course Name</label>
+          <div class="input-wrap"><span class="input-icon">📚</span>
+            <input type="text" id="courseName" placeholder="e.g. Data Structures" />
+          </div>
+        </div>
+        <div class="form-group">
+          <label>Course Code</label>
+          <div class="input-wrap"><span class="input-icon">#</span>
+            <input type="text" id="courseCode" placeholder="e.g. CS301" />
+          </div>
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label>Instructor</label>
+          <div class="input-wrap"><span class="input-icon">👨‍🏫</span>
+            <input type="text" id="courseInstructor" placeholder="Professor name" />
+          </div>
+        </div>
+        <div class="form-group">
+          <label>Credits</label>
+          <div class="input-wrap"><span class="input-icon">⭐</span>
+            <input type="number" id="courseCredits" placeholder="3" min="1" max="6" value="3" />
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-secondary" onclick="closeModal('courseModal')">Cancel</button>
+      <button class="btn-primary" style="width:auto;padding:10px 24px;" onclick="saveCourse()">Save Course</button>
+    </div>
+  </div>
+</div>
+
+<!-- ADD ASSESSMENT MODAL -->
+<div class="modal-overlay hidden" id="assessmentModal">
+  <div class="modal">
+    <div class="modal-header">
+      <h3>Add Assessment</h3>
+      <button class="modal-close" onclick="closeModal('assessmentModal')">✕</button>
+    </div>
+    <div class="modal-body">
+      <input type="hidden" id="assessCourseId" />
+      <div class="form-row">
+        <div class="form-group">
+          <label>Type</label>
+          <select id="assessType">
+            <option value="exam">📋 Exam</option>
+            <option value="classtest">🧪 Class Test</option>
+            <option value="quiz">❓ Quiz</option>
+            <option value="assignment">📝 Assignment</option>
+            <option value="presentation">🗣 Presentation</option>
+            <option value="project">🛠 Project</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Title</label>
+          <div class="input-wrap"><span class="input-icon">📌</span>
+            <input type="text" id="assessTitle" placeholder="e.g. Midterm Exam" />
+          </div>
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label>Your Score</label>
+          <div class="input-wrap"><span class="input-icon">🎯</span>
+            <input type="number" id="assessScore" placeholder="85" min="0" />
+          </div>
+        </div>
+        <div class="form-group">
+          <label>Total Marks</label>
+          <div class="input-wrap"><span class="input-icon">💯</span>
+            <input type="number" id="assessTotal" placeholder="100" value="100" min="1" />
+          </div>
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label>Date</label>
+          <input type="date" id="assessDate" />
+        </div>
+        <div class="form-group">
+          <label>Weight (%)</label>
+          <div class="input-wrap"><span class="input-icon">⚖</span>
+            <input type="number" id="assessWeight" placeholder="100" value="100" min="1" max="100" />
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-secondary" onclick="closeModal('assessmentModal')">Cancel</button>
+      <button class="btn-primary" style="width:auto;padding:10px 24px;" onclick="saveAssessment()">Save Score</button>
+    </div>
+  </div>
+</div>
+
+<!-- ADD REMINDER MODAL -->
+<div class="modal-overlay hidden" id="reminderModal">
+  <div class="modal">
+    <div class="modal-header">
+      <h3 id="reminderModalTitle">Add Reminder</h3>
+      <button class="modal-close" onclick="closeModal('reminderModal')">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-group">
+        <label>Title</label>
+        <div class="input-wrap"><span class="input-icon">🔔</span>
+          <input type="text" id="reminderTitle" placeholder="e.g. CS301 Final Exam" />
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label>Date & Time</label>
+          <input type="datetime-local" id="reminderDatetime" />
+        </div>
+        <div class="form-group">
+          <label>Type</label>
+          <select id="reminderType">
+            <option value="exam">📋 Exam</option>
+            <option value="assignment">📝 Assignment Due</option>
+            <option value="class">📚 Class</option>
+            <option value="meeting">🤝 Meeting</option>
+            <option value="custom">⭐ Custom</option>
+          </select>
+        </div>
+      </div>
+      <div class="form-group">
+        <label>Notes (optional)</label>
+        <textarea id="reminderNote" placeholder="Any additional notes..." rows="2"></textarea>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-secondary" onclick="closeModal('reminderModal')">Cancel</button>
+      <button class="btn-primary" style="width:auto;padding:10px 24px;" onclick="saveReminder()">Set Reminder</button>
+    </div>
+  </div>
+</div>
+
+<!-- ADD CALENDAR EVENT MODAL -->
+<div class="modal-overlay hidden" id="calEventModal">
+  <div class="modal">
+    <div class="modal-header">
+      <h3>Add Calendar Event</h3>
+      <button class="modal-close" onclick="closeModal('calEventModal')">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-group">
+        <label>Event Title</label>
+        <div class="input-wrap"><span class="input-icon">📌</span>
+          <input type="text" id="calEventTitle" placeholder="e.g. Midterm Week" />
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label>Date</label>
+          <input type="date" id="calEventDate" />
+        </div>
+        <div class="form-group">
+          <label>Type</label>
+          <select id="calEventType">
+            <option value="exam">📋 Exam</option>
+            <option value="deadline">⏰ Deadline</option>
+            <option value="holiday">🏖 Holiday</option>
+            <option value="event">📅 Event</option>
+            <option value="class">📚 Class</option>
+          </select>
+        </div>
+      </div>
+      <div class="form-group">
+        <label>Course (optional)</label>
+        <select id="calEventCourse">
+          <option value="">No course</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Description</label>
+        <textarea id="calEventDesc" placeholder="Optional description..." rows="2"></textarea>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-secondary" onclick="closeModal('calEventModal')">Cancel</button>
+      <button class="btn-primary" style="width:auto;padding:10px 24px;" onclick="saveCalendarEvent()">Add Event</button>
+    </div>
+  </div>
+</div>
+
+<!-- VIEW COURSE ASSESSMENTS MODAL -->
+<div class="modal-overlay hidden" id="courseDetailModal" style="align-items:flex-start;overflow-y:auto;">
+  <div class="modal" style="max-width:680px;margin:30px auto;">
+    <div class="modal-header">
+      <h3 id="courseDetailTitle">Course Assessments</h3>
+      <button class="modal-close" onclick="closeModal('courseDetailModal')">✕</button>
+    </div>
+    <div class="modal-body">
+      <div style="height:220px;margin-bottom:16px;"><canvas id="courseDetailChart"></canvas></div>
+      <div id="courseDetailAssessments"></div>
+      <button class="btn-primary" style="margin-top:10px;" onclick="openAssessmentFromDetail()">+ Add Assessment</button>
+    </div>
+  </div>
+</div>
+
+<script src="js/app.js"></script>
+</body>
+</html>

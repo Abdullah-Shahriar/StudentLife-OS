@@ -1,0 +1,435 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>StudentLife OS – Admin Panel</title>
+  <link rel="stylesheet" href="css/main.css" />
+  <link rel="stylesheet" href="css/dashboard.css" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Space+Grotesk:wght@400;600;700&display=swap" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+  <style>
+    .admin-page { min-height: 100vh; background: radial-gradient(ellipse at 50% 0%, rgba(239,68,68,0.08) 0%, transparent 60%), var(--bg-dark); padding: 30px; position: relative; z-index:1; }
+    .admin-login { max-width: 420px; margin: 80px auto; }
+    .admin-panel { max-width: 1200px; margin: 0 auto; animation: fadeUp 0.4s ease; }
+    .admin-header { display:flex;align-items:center;justify-content:space-between;margin-bottom:28px;flex-wrap:wrap;gap:12px; }
+    .tabs { display:flex;gap:8px;flex-wrap:wrap; }
+    .tab-btn-admin { padding:9px 18px;background:rgba(255,255,255,0.05);border:1px solid var(--border);border-radius:50px;color:var(--text-muted);font-size:13px;font-weight:500;cursor:pointer;transition:var(--transition); }
+    .tab-btn-admin.active { background:rgba(239,68,68,0.12);border-color:rgba(239,68,68,0.3);color:#f87171; }
+    .admin-section { display:none; }
+    .admin-section.active { display:block;animation:fadeUp 0.3s ease; }
+    .search-bar { padding:10px 14px;background:rgba(255,255,255,0.06);border:1px solid var(--border);border-radius:var(--radius-sm);color:var(--text);font-size:14px;outline:none;width:280px;transition:var(--transition); }
+    .search-bar:focus { border-color:var(--primary);background:rgba(99,102,241,0.08); }
+    .badge-pill { padding:3px 10px;border-radius:50px;font-size:11px;font-weight:700; }
+    .badge-online { background:rgba(16,185,129,0.15);color:var(--success); }
+    .badge-offline { background:rgba(100,116,139,0.15);color:var(--text-faint); }
+    table { width:100%;border-collapse:collapse; }
+    th { font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:0.8px;color:var(--text-faint);padding:10px 14px;text-align:left;border-bottom:1px solid var(--border); }
+    td { padding:12px 14px;font-size:13px;border-bottom:1px solid rgba(255,255,255,0.04); }
+    tr:hover td { background:rgba(255,255,255,0.03); }
+    .expand-btn { background:none;border:none;color:var(--primary-light);cursor:pointer;font-size:12px;font-weight:500; }
+    .session-row { background:rgba(99,102,241,0.05);border-left:3px solid var(--primary); }
+    .session-row td { font-size:12px;color:var(--text-muted); }
+    .tool-list { display:flex;flex-wrap:wrap;gap:4px; }
+    .tool-tag { background:rgba(99,102,241,0.1);border:1px solid rgba(99,102,241,0.2);border-radius:50px;padding:2px 8px;font-size:10px;color:var(--primary-light); }
+  </style>
+</head>
+<body>
+<canvas id="bg-canvas"></canvas>
+<div id="toast-container"></div>
+
+<!-- ═══ LOGIN GATE ═══ -->
+<div class="admin-page" id="adminLoginPage">
+  <div class="admin-login">
+    <div class="glass-card">
+      <div class="brand">
+        <div style="width:48px;height:48px;background:linear-gradient(135deg,#ef4444,#dc2626);border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:22px;flex-shrink:0;">🛡</div>
+        <div class="brand-text">
+          <h1>Admin <span style="background:linear-gradient(135deg,#f87171,#fca5a5);-webkit-background-clip:text;-webkit-text-fill-color:transparent;">Panel</span></h1>
+          <p>Restricted access</p>
+        </div>
+      </div>
+      <div class="auth-form">
+        <div class="form-group">
+          <label>Admin Secret Code</label>
+          <div class="input-wrap">
+            <span class="input-icon">🔑</span>
+            <input type="password" id="adminCodeInput" placeholder="Enter secret code" onkeydown="if(event.key==='Enter')verifyAdmin()" />
+            <button type="button" class="toggle-pw" onclick="togglePw('adminCodeInput',this)">👁</button>
+          </div>
+        </div>
+        <div id="adminLoginError" class="error-msg"></div>
+        <button class="btn-primary" onclick="verifyAdmin()">
+          <span class="btn-text">Access Panel</span>
+          <div class="btn-loader hidden"></div>
+        </button>
+        <p class="auth-switch"><a href="/">← Back to Login</a></p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ ADMIN PANEL ═══ -->
+<div class="admin-page" id="adminPanel" style="display:none;">
+  <div class="admin-panel">
+    <div class="admin-header">
+      <div>
+        <h1 style="font-family:var(--font-display);font-size:24px;font-weight:800;">🛡 Admin Panel</h1>
+        <p style="color:var(--text-muted);font-size:13px;margin-top:4px;">StudentLife OS – Control Center</p>
+      </div>
+      <div style="display:flex;gap:10px;align-items:center;">
+        <div id="adminStats" style="display:flex;gap:12px;"></div>
+        <button class="btn-danger" onclick="adminLogout()">Logout</button>
+      </div>
+    </div>
+
+    <div class="tabs" style="margin-bottom:24px;">
+      <button class="tab-btn-admin active" onclick="showAdminTab('users',this)">👥 Users</button>
+      <button class="tab-btn-admin" onclick="showAdminTab('sessions',this)">📋 Sessions Log</button>
+      <button class="tab-btn-admin" onclick="showAdminTab('analytics',this)">📊 Analytics</button>
+    </div>
+
+    <!-- USERS TAB -->
+    <div class="admin-section active" id="adminTab-users">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;flex-wrap:wrap;gap:10px;">
+        <h3 style="font-size:16px;font-weight:600;">Registered Users</h3>
+        <input class="search-bar" placeholder="🔍 Search users..." oninput="filterUsers(this.value)" />
+      </div>
+      <div class="glass-card" style="padding:0;overflow:hidden;">
+        <table id="usersTable">
+          <thead>
+            <tr>
+              <th>Name</th><th>Email</th><th>Phone</th><th>Joined</th>
+              <th>Logins</th><th>Last Login</th><th>Status</th><th>Details</th>
+            </tr>
+          </thead>
+          <tbody id="usersTableBody"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- SESSIONS TAB -->
+    <div class="admin-section" id="adminTab-sessions">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;flex-wrap:wrap;gap:10px;">
+        <h3 style="font-size:16px;font-weight:600;">Session Logs</h3>
+        <input class="search-bar" placeholder="🔍 Filter by email..." oninput="filterSessions(this.value)" />
+      </div>
+      <div class="glass-card" style="padding:0;overflow:hidden;">
+        <table>
+          <thead>
+            <tr><th>User</th><th>Email</th><th>Login Time</th><th>Logout Time</th><th>Duration</th><th>Tools Used</th></tr>
+          </thead>
+          <tbody id="sessionsTableBody"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- ANALYTICS TAB -->
+    <div class="admin-section" id="adminTab-analytics">
+      <div class="stats-row" style="margin-bottom:24px;" id="analyticsStats"></div>
+      <div class="chart-grid">
+        <div class="chart-card">
+          <h4>📅 User Registrations</h4>
+          <div class="chart-wrap"><canvas id="regChart"></canvas></div>
+        </div>
+        <div class="chart-card">
+          <h4>🔧 Top Tools Used</h4>
+          <div class="chart-wrap"><canvas id="toolsChart"></canvas></div>
+        </div>
+        <div class="chart-card" style="grid-column:span 2;">
+          <h4>📈 Login Activity (Last 30 Days)</h4>
+          <div class="chart-wrap" style="height:250px;"><canvas id="activityChart"></canvas></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="js/three-bg.js"></script>
+<script>
+/* ── ADMIN PANEL JS ── */
+const ADMIN_CODE = '';
+let adminCodeVerified = '';
+let allUsersData = [];
+let allLogsData = {};
+let filteredUsers = [];
+let regChartInst, toolsChartInst, actChartInst;
+
+function togglePw(id, btn) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  el.type = el.type === 'password' ? 'text' : 'password';
+  btn.textContent = el.type === 'password' ? '👁' : '🙈';
+}
+
+function showError(id, msg) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  el.textContent = msg;
+  el.classList.add('show');
+  setTimeout(() => el.classList.remove('show'), 4000);
+}
+
+function toast(msg, type = 'info') {
+  const c = document.getElementById('toast-container');
+  const el = document.createElement('div');
+  el.className = `toast ${type}`;
+  el.textContent = msg;
+  el.onclick = () => el.remove();
+  c.appendChild(el);
+  setTimeout(() => el.remove(), 4000);
+}
+
+async function verifyAdmin() {
+  const code = document.getElementById('adminCodeInput').value;
+  if (!code) { showError('adminLoginError', 'Enter the admin code'); return; }
+
+  try {
+    const res = await fetch('/api/admin/summary', { headers: { 'x-admin-code': code } });
+    if (!res.ok) throw new Error('Invalid secret code');
+    const data = await res.json();
+    adminCodeVerified = code;
+    document.getElementById('adminLoginPage').style.display = 'none';
+    document.getElementById('adminPanel').style.display = 'block';
+    allUsersData = data;
+    filteredUsers = data;
+    loadAdminData();
+  } catch (err) {
+    showError('adminLoginError', err.message);
+  }
+}
+
+function adminLogout() {
+  adminCodeVerified = '';
+  document.getElementById('adminLoginPage').style.display = 'block';
+  document.getElementById('adminPanel').style.display = 'none';
+  document.getElementById('adminCodeInput').value = '';
+}
+
+async function loadAdminData() {
+  try {
+    const [summaryRes, logsRes] = await Promise.all([
+      fetch('/api/admin/summary', { headers: { 'x-admin-code': adminCodeVerified } }),
+      fetch('/api/admin/logs', { headers: { 'x-admin-code': adminCodeVerified } })
+    ]);
+    allUsersData = await summaryRes.json();
+    filteredUsers = [...allUsersData];
+    allLogsData = await logsRes.json();
+
+    renderUsersTable();
+    renderSessionsTable();
+    renderAnalytics();
+    renderAdminStats();
+  } catch (err) { toast('Failed to load data', 'error'); }
+}
+
+function renderAdminStats() {
+  const el = document.getElementById('adminStats');
+  if (!el) return;
+  const totalLogins = allUsersData.reduce((s, u) => s + u.totalLogins, 0);
+  el.innerHTML = `
+    <div style="background:rgba(99,102,241,0.12);border:1px solid rgba(99,102,241,0.25);border-radius:var(--radius-sm);padding:10px 16px;text-align:center;">
+      <div style="font-size:22px;font-weight:800;">${allUsersData.length}</div>
+      <div style="font-size:11px;color:var(--text-muted);">Users</div>
+    </div>
+    <div style="background:rgba(16,185,129,0.12);border:1px solid rgba(16,185,129,0.25);border-radius:var(--radius-sm);padding:10px 16px;text-align:center;">
+      <div style="font-size:22px;font-weight:800;">${totalLogins}</div>
+      <div style="font-size:11px;color:var(--text-muted);">Total Logins</div>
+    </div>`;
+}
+
+function renderUsersTable() {
+  const tbody = document.getElementById('usersTableBody');
+  if (!tbody) return;
+
+  tbody.innerHTML = filteredUsers.map(u => {
+    const lastLogin = u.lastLogin ? new Date(u.lastLogin).toLocaleString() : 'Never';
+    const lastOut = u.lastLogout;
+    const online = u.lastLogin && (!lastOut || new Date(u.lastLogin) > new Date(lastOut));
+
+    return `
+    <tr>
+      <td><div style="display:flex;align-items:center;gap:10px;">
+        <div style="width:32px;height:32px;border-radius:50%;background:linear-gradient(135deg,var(--primary),var(--secondary));display:flex;align-items:center;justify-content:center;font-weight:700;font-size:13px;flex-shrink:0;">${u.name?.[0]?.toUpperCase()||'?'}</div>
+        <span style="font-weight:500;">${escHtml(u.name)}</span>
+      </div></td>
+      <td style="color:var(--text-muted);font-size:12px;">${escHtml(u.email)}</td>
+      <td style="color:var(--text-muted);font-size:12px;">${escHtml(u.phone||'—')}</td>
+      <td style="font-size:12px;color:var(--text-faint);">${u.createdAt ? new Date(u.createdAt).toLocaleDateString() : '—'}</td>
+      <td><span style="font-weight:700;color:var(--primary-light);">${u.totalLogins}</span></td>
+      <td style="font-size:12px;color:var(--text-muted);">${lastLogin}</td>
+      <td><span class="badge-pill ${online ? 'badge-online' : 'badge-offline'}">${online ? '● Online' : '○ Offline'}</span></td>
+      <td><button class="expand-btn" onclick="expandUser('${u.email}')">Details →</button></td>
+    </tr>
+    <tr id="expand-${u.email.replace(/[^a-zA-Z0-9]/g,'_')}" style="display:none;" class="session-row">
+      <td colspan="8">
+        <div style="padding:10px 0;">
+          <div style="font-size:12px;font-weight:600;margin-bottom:8px;color:var(--text-muted);">Top Tools Used:</div>
+          <div class="tool-list">${(u.topTools||[]).map(t => `<span class="tool-tag">${t.tool} (${t.count})</span>`).join('') || '<span style="color:var(--text-faint);font-size:12px;">No data</span>'}</div>
+          <div style="font-size:12px;font-weight:600;margin-top:12px;margin-bottom:8px;color:var(--text-muted);">Recent Sessions:</div>
+          ${(u.sessions||[]).slice(-5).reverse().map(s => `
+            <div style="font-size:12px;padding:6px 10px;background:rgba(255,255,255,0.03);border-radius:6px;margin-bottom:4px;display:flex;gap:16px;flex-wrap:wrap;">
+              <span>🟢 ${new Date(s.loginTime).toLocaleString()}</span>
+              <span>🔴 ${s.logoutTime ? new Date(s.logoutTime).toLocaleString() : 'Active'}</span>
+              <span>🔧 ${s.toolsUsed?.length || 0} actions</span>
+            </div>`).join('')}
+        </div>
+      </td>
+    </tr>`;
+  }).join('');
+}
+
+function expandUser(email) {
+  const key = email.replace(/[^a-zA-Z0-9]/g, '_');
+  const row = document.getElementById('expand-' + key);
+  if (row) row.style.display = row.style.display === 'none' ? 'table-row' : 'none';
+}
+
+function filterUsers(val) {
+  const q = val.toLowerCase();
+  filteredUsers = allUsersData.filter(u =>
+    u.name.toLowerCase().includes(q) || u.email.toLowerCase().includes(q) || (u.phone||'').includes(q)
+  );
+  renderUsersTable();
+}
+
+function renderSessionsTable(filterEmail = '') {
+  const tbody = document.getElementById('sessionsTableBody');
+  if (!tbody) return;
+
+  let rows = [];
+  Object.values(allLogsData).forEach(u => {
+    if (filterEmail && !u.email.toLowerCase().includes(filterEmail.toLowerCase())) return;
+    (u.sessions || []).forEach(s => {
+      rows.push({ name: u.name, email: u.email, ...s });
+    });
+  });
+  rows.sort((a, b) => new Date(b.loginTime) - new Date(a.loginTime));
+
+  if (!rows.length) { tbody.innerHTML = `<tr><td colspan="6" style="text-align:center;color:var(--text-faint);padding:30px;">No session logs found.</td></tr>`; return; }
+
+  tbody.innerHTML = rows.slice(0, 100).map(r => {
+    const dur = r.logoutTime ? formatDuration(new Date(r.logoutTime) - new Date(r.loginTime)) : '–';
+    const tools = (r.toolsUsed || []).map(t => `<span class="tool-tag">${t.tool}</span>`).join('') || '—';
+    return `
+    <tr>
+      <td style="font-weight:500;">${escHtml(r.name)}</td>
+      <td style="color:var(--text-muted);font-size:12px;">${escHtml(r.email)}</td>
+      <td style="font-size:12px;">${new Date(r.loginTime).toLocaleString()}</td>
+      <td style="font-size:12px;color:var(--text-muted);">${r.logoutTime ? new Date(r.logoutTime).toLocaleString() : '<span style="color:var(--success)">Active</span>'}</td>
+      <td style="font-size:12px;">${dur}</td>
+      <td><div class="tool-list" style="max-width:220px;">${tools}</div></td>
+    </tr>`;
+  }).join('');
+}
+
+function filterSessions(val) { renderSessionsTable(val); }
+
+function formatDuration(ms) {
+  const m = Math.floor(ms / 60000);
+  const h = Math.floor(m / 60);
+  if (h > 0) return `${h}h ${m % 60}m`;
+  return `${m}m`;
+}
+
+function renderAnalytics() {
+  const el = document.getElementById('analyticsStats');
+  if (el) {
+    const totalSessions = allUsersData.reduce((s, u) => s + (u.sessions?.length || 0), 0);
+    const totalTools = allUsersData.reduce((s, u) => s + (u.topTools?.reduce((a, t) => a + t.count, 0) || 0), 0);
+    el.innerHTML = `
+      <div class="stat-card" style="--stat-color:#6366f1"><div class="stat-icon">👥</div><div class="stat-value">${allUsersData.length}</div><div class="stat-label">Total Users</div></div>
+      <div class="stat-card" style="--stat-color:#06b6d4"><div class="stat-icon">🔐</div><div class="stat-value">${totalSessions}</div><div class="stat-label">Total Sessions</div></div>
+      <div class="stat-card" style="--stat-color:#10b981"><div class="stat-icon">🔧</div><div class="stat-value">${totalTools}</div><div class="stat-label">Total Actions</div></div>`;
+  }
+
+  // Registration chart
+  renderRegChart();
+  renderToolsChart();
+  renderActivityChart();
+}
+
+function renderRegChart() {
+  const ctx = document.getElementById('regChart');
+  if (!ctx) return;
+  if (regChartInst) regChartInst.destroy();
+
+  const months = {};
+  allUsersData.forEach(u => {
+    if (u.createdAt) {
+      const m = new Date(u.createdAt).toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
+      months[m] = (months[m] || 0) + 1;
+    }
+  });
+  const labels = Object.keys(months);
+  const data = Object.values(months);
+
+  regChartInst = new Chart(ctx, {
+    type: 'bar',
+    data: { labels, datasets: [{ label: 'Registrations', data, backgroundColor: '#6366f188', borderColor: '#6366f1', borderWidth: 1.5, borderRadius: 6 }] },
+    options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { x: { ticks: { color: '#64748b', font: { size: 10 } }, grid: { display: false } }, y: { ticks: { color: '#64748b', font: { size: 10 } }, grid: { color: 'rgba(255,255,255,0.05)' } } } }
+  });
+}
+
+function renderToolsChart() {
+  const ctx = document.getElementById('toolsChart');
+  if (!ctx) return;
+  if (toolsChartInst) toolsChartInst.destroy();
+
+  const toolCounts = {};
+  allUsersData.forEach(u => (u.topTools || []).forEach(t => { toolCounts[t.tool] = (toolCounts[t.tool] || 0) + t.count; }));
+  const sorted = Object.entries(toolCounts).sort((a, b) => b[1] - a[1]).slice(0, 8);
+
+  toolsChartInst = new Chart(ctx, {
+    type: 'doughnut',
+    data: { labels: sorted.map(([k]) => k.replace('/api','').slice(0,20)), datasets: [{ data: sorted.map(([,v]) => v), backgroundColor: ['#6366f1','#06b6d4','#f472b6','#10b981','#f59e0b','#a855f7','#ef4444','#14b8a6'], borderWidth: 0 }] },
+    options: { responsive: true, maintainAspectRatio: false, cutout: '55%', plugins: { legend: { labels: { color: '#94a3b8', font: { size: 10 }, boxWidth: 10 }, position: 'right' } } }
+  });
+}
+
+function renderActivityChart() {
+  const ctx = document.getElementById('activityChart');
+  if (!ctx) return;
+  if (actChartInst) actChartInst.destroy();
+
+  const now = new Date();
+  const days = [];
+  for (let i = 29; i >= 0; i--) {
+    const d = new Date(now); d.setDate(d.getDate() - i);
+    days.push(d.toISOString().split('T')[0]);
+  }
+
+  const counts = {};
+  days.forEach(d => { counts[d] = 0; });
+  Object.values(allLogsData).forEach(u => {
+    (u.sessions || []).forEach(s => {
+      const d = s.loginTime?.split('T')[0];
+      if (d && counts[d] !== undefined) counts[d]++;
+    });
+  });
+
+  actChartInst = new Chart(ctx, {
+    type: 'line',
+    data: {
+      labels: days.map(d => new Date(d).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })),
+      datasets: [{ label: 'Logins', data: days.map(d => counts[d] || 0), borderColor: '#06b6d4', backgroundColor: '#06b6d420', borderWidth: 2, pointRadius: 3, tension: 0.4, fill: true }]
+    },
+    options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { x: { ticks: { color: '#64748b', font: { size: 9 } }, grid: { color: 'rgba(255,255,255,0.04)' } }, y: { ticks: { color: '#64748b', font: { size: 10 } }, grid: { color: 'rgba(255,255,255,0.05)' } } } }
+  });
+}
+
+function showAdminTab(name, btn) {
+  document.querySelectorAll('.admin-section').forEach(s => s.classList.remove('active'));
+  document.querySelectorAll('.tab-btn-admin').forEach(b => b.classList.remove('active'));
+  document.getElementById('adminTab-' + name)?.classList.add('active');
+  btn.classList.add('active');
+}
+
+function escHtml(str) {
+  if (!str) return '';
+  return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+</script>
+</body>
+</html>

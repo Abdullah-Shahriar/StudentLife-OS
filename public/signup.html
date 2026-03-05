@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>StudentLife OS – Sign Up</title>
+  <link rel="stylesheet" href="css/main.css" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Space+Grotesk:wght@400;600;700&display=swap" rel="stylesheet" />
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+</head>
+<body class="auth-page">
+  <canvas id="bg-canvas"></canvas>
+
+  <div class="auth-container">
+    <div class="auth-card glass-card wide-card">
+      <div class="brand">
+        <div class="brand-icon">
+          <svg viewBox="0 0 40 40" fill="none">
+            <circle cx="20" cy="20" r="20" fill="url(#grad1)"/>
+            <path d="M12 20L17 25L28 14" stroke="white" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+            <defs>
+              <linearGradient id="grad1" x1="0" y1="0" x2="40" y2="40">
+                <stop offset="0%" stop-color="#6366f1"/>
+                <stop offset="100%" stop-color="#06b6d4"/>
+              </linearGradient>
+            </defs>
+          </svg>
+        </div>
+        <div class="brand-text">
+          <h1>Join <span class="highlight">StudentLife OS</span></h1>
+          <p>Start your academic journey</p>
+        </div>
+      </div>
+
+      <form id="signupForm" class="auth-form">
+        <div class="form-row">
+          <div class="form-group">
+            <label>Full Name</label>
+            <div class="input-wrap">
+              <span class="input-icon">👤</span>
+              <input type="text" id="signupName" placeholder="Your full name" required />
+            </div>
+          </div>
+          <div class="form-group">
+            <label>Phone Number</label>
+            <div class="input-wrap">
+              <span class="input-icon">📱</span>
+              <input type="tel" id="signupPhone" placeholder="+1 234 567 8900" required />
+            </div>
+          </div>
+        </div>
+        <div class="form-group">
+          <label>University Email</label>
+          <div class="input-wrap">
+            <span class="input-icon">✉</span>
+            <input type="email" id="signupEmail" placeholder="you@university.edu" required />
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label>Password</label>
+            <div class="input-wrap">
+              <span class="input-icon">🔒</span>
+              <input type="password" id="signupPassword" placeholder="Create password (min 6 chars)" required minlength="6" />
+              <button type="button" class="toggle-pw" onclick="togglePw('signupPassword', this)">👁</button>
+            </div>
+          </div>
+          <div class="form-group">
+            <label>Confirm Password</label>
+            <div class="input-wrap">
+              <span class="input-icon">🔒</span>
+              <input type="password" id="signupConfirm" placeholder="Re-enter password" required />
+              <button type="button" class="toggle-pw" onclick="togglePw('signupConfirm', this)">👁</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="password-strength" id="strengthBar">
+          <div class="strength-fill" id="strengthFill"></div>
+          <span id="strengthLabel"></span>
+        </div>
+
+        <div id="signupError" class="error-msg"></div>
+        <div id="signupSuccess" class="success-msg"></div>
+
+        <button type="submit" class="btn-primary" id="signupBtn">
+          <span class="btn-text">Create Account</span>
+          <div class="btn-loader hidden"></div>
+        </button>
+        <p class="auth-switch">Already have an account? <a href="/">Sign in →</a></p>
+      </form>
+    </div>
+  </div>
+
+  <script src="js/three-bg.js"></script>
+  <script src="js/auth.js"></script>
+</body>
+</html>

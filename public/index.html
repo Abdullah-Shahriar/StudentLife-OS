@@ -1,0 +1,448 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>StudentLife OS – Login</title>
+  <link rel="stylesheet" href="css/main.css" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Space+Grotesk:wght@400;600;700&display=swap" rel="stylesheet" />
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+</head>
+<body class="auth-page">
+  <canvas id="bg-canvas"></canvas>
+
+  <div class="auth-container">
+    <div class="auth-card glass-card">
+      <div class="brand">
+        <div class="brand-icon">
+          <svg viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <circle cx="20" cy="20" r="20" fill="url(#grad1)"/>
+            <path d="M12 20L17 25L28 14" stroke="white" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+            <defs>
+              <linearGradient id="grad1" x1="0" y1="0" x2="40" y2="40">
+                <stop offset="0%" stop-color="#6366f1"/>
+                <stop offset="100%" stop-color="#06b6d4"/>
+              </linearGradient>
+            </defs>
+          </svg>
+        </div>
+        <div class="brand-text">
+          <h1>StudentLife <span class="highlight">OS</span></h1>
+          <p>Your academic command center</p>
+        </div>
+      </div>
+
+      <div class="auth-tabs">
+        <button class="tab-btn active" id="loginTab" onclick="showTab('login')">Sign In</button>
+        <div class="tab-slider" id="tabSlider"></div>
+      </div>
+
+      <form id="loginForm" class="auth-form">
+        <div class="form-group">
+          <label>Email Address</label>
+          <div class="input-wrap">
+            <span class="input-icon">✉</span>
+            <input type="email" id="loginEmail" placeholder="you@university.edu" required autocomplete="email" />
+          </div>
+        </div>
+        <div class="form-group">
+          <label>Password</label>
+          <div class="input-wrap">
+            <span class="input-icon">🔒</span>
+            <input type="password" id="loginPassword" placeholder="Enter your password" required autocomplete="current-password" />
+            <button type="button" class="toggle-pw" onclick="togglePw('loginPassword', this)">👁</button>
+          </div>
+        </div>
+        <div id="loginError" class="error-msg"></div>
+        <button type="submit" class="btn-primary" id="loginBtn">
+          <span class="btn-text">Sign In</span>
+          <div class="btn-loader hidden"></div>
+        </button>
+        <p class="auth-switch">Don't have an account? <a href="/signup">Create one →</a></p>
+      </form>
+    </div>
+
+    <div class="auth-features">
+      <div class="feature-chip glass-chip"><span>📊</span> Grade Analytics</div>
+      <div class="feature-chip glass-chip"><span>✅</span> Smart Todo</div>
+      <div class="feature-chip glass-chip"><span>🤖</span> AI Assistant</div>
+      <div class="feature-chip glass-chip"><span>⏰</span> Smart Reminders</div>
+      <div class="feature-chip glass-chip"><span>📅</span> Academic Calendar</div>
+      <div class="feature-chip glass-chip"><span>📈</span> Progress Charts</div>
+    </div>
+
+    <!-- View Demo Button -->
+    <div class="demo-cta">
+      <button class="btn-demo" onclick="openDemo()">
+        <span class="demo-icon">▶</span>
+        <span>View Live Demo</span>
+        <span class="demo-badge">No login needed</span>
+      </button>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════
+       DEMO MODAL — live preview of the full app
+       ═══════════════════════════════════════════ -->
+  <div id="demoOverlay" class="demo-overlay hidden" onclick="closeDemoOutside(event)">
+    <div class="demo-modal">
+
+      <!-- Header -->
+      <div class="demo-header">
+        <div class="demo-header-left">
+          <div class="demo-avatar">A</div>
+          <div>
+            <div class="demo-username">Abdul Shahriar</div>
+            <div class="demo-semester">Spring 2026 · UIU · BSc CSE</div>
+          </div>
+          <span class="demo-live-pill">● LIVE DEMO</span>
+        </div>
+        <button class="demo-close" onclick="closeDemo()">✕</button>
+      </div>
+
+      <!-- Tabs -->
+      <div class="demo-tabs">
+        <button class="demo-tab active" data-tab="overview" onclick="switchDemoTab('overview',this)">📊 Overview</button>
+        <button class="demo-tab" data-tab="grades"   onclick="switchDemoTab('grades',this)">🎓 Grades</button>
+        <button class="demo-tab" data-tab="todo"     onclick="switchDemoTab('todo',this)">✅ Todo</button>
+        <button class="demo-tab" data-tab="planner"  onclick="switchDemoTab('planner',this)">📅 Planner</button>
+        <button class="demo-tab" data-tab="bot"      onclick="switchDemoTab('bot',this)">🤖 Bot</button>
+      </div>
+
+      <!-- ── OVERVIEW TAB ── -->
+      <div class="demo-page active" id="dtab-overview">
+        <div class="demo-stats-row">
+          <div class="demo-stat" style="--sc:#6366f1">
+            <div class="demo-stat-icon">🎓</div>
+            <div class="demo-stat-val">3.72</div>
+            <div class="demo-stat-lbl">Current GPA</div>
+          </div>
+          <div class="demo-stat" style="--sc:#06b6d4">
+            <div class="demo-stat-icon">📚</div>
+            <div class="demo-stat-val">5</div>
+            <div class="demo-stat-lbl">Active Courses</div>
+          </div>
+          <div class="demo-stat" style="--sc:#10b981">
+            <div class="demo-stat-icon">✅</div>
+            <div class="demo-stat-val">18/24</div>
+            <div class="demo-stat-lbl">Todos Done</div>
+          </div>
+          <div class="demo-stat" style="--sc:#f472b6">
+            <div class="demo-stat-icon">📈</div>
+            <div class="demo-stat-val">+8%</div>
+            <div class="demo-stat-lbl">vs Last Month</div>
+          </div>
+        </div>
+
+        <div class="demo-charts-row">
+          <div class="demo-chart-card">
+            <div class="demo-chart-title">📈 Overall Grade Trend — Spring 2026</div>
+            <canvas id="dOverallChart" height="140"></canvas>
+          </div>
+          <div class="demo-chart-card">
+            <div class="demo-chart-title">🍩 Score Distribution</div>
+            <canvas id="dDonutChart" height="140"></canvas>
+          </div>
+        </div>
+
+        <div class="demo-courses-preview">
+          <div class="demo-section-title">Active Courses</div>
+          <div class="demo-course-row">
+            <div class="demo-course-dot" style="background:#6366f1"></div>
+            <div class="demo-course-info"><span>CSE 4401 – Machine Learning</span><span class="demo-course-code">Dr. Rahman</span></div>
+            <div class="demo-course-bar"><div class="demo-course-fill" style="width:82%;background:#6366f1"></div></div>
+            <div class="demo-course-pct" style="color:#6366f1">82%</div>
+          </div>
+          <div class="demo-course-row">
+            <div class="demo-course-dot" style="background:#06b6d4"></div>
+            <div class="demo-course-info"><span>CSE 4301 – Computer Networks</span><span class="demo-course-code">Dr. Islam</span></div>
+            <div class="demo-course-bar"><div class="demo-course-fill" style="width:76%;background:#06b6d4"></div></div>
+            <div class="demo-course-pct" style="color:#06b6d4">76%</div>
+          </div>
+          <div class="demo-course-row">
+            <div class="demo-course-dot" style="background:#f472b6"></div>
+            <div class="demo-course-info"><span>CSE 4201 – Software Engineering</span><span class="demo-course-code">Dr. Hossain</span></div>
+            <div class="demo-course-bar"><div class="demo-course-fill" style="width:89%;background:#f472b6"></div></div>
+            <div class="demo-course-pct" style="color:#f472b6">89%</div>
+          </div>
+          <div class="demo-course-row">
+            <div class="demo-course-dot" style="background:#fbbf24"></div>
+            <div class="demo-course-info"><span>MATH 3101 – Numerical Methods</span><span class="demo-course-code">Dr. Alam</span></div>
+            <div class="demo-course-bar"><div class="demo-course-fill" style="width:68%;background:#fbbf24"></div></div>
+            <div class="demo-course-pct" style="color:#fbbf24">68%</div>
+          </div>
+          <div class="demo-course-row">
+            <div class="demo-course-dot" style="background:#34d399"></div>
+            <div class="demo-course-info"><span>CSE 4101 – Compiler Design</span><span class="demo-course-code">Dr. Khan</span></div>
+            <div class="demo-course-bar"><div class="demo-course-fill" style="width:74%;background:#34d399"></div></div>
+            <div class="demo-course-pct" style="color:#34d399">74%</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ── GRADES TAB ── -->
+      <div class="demo-page" id="dtab-grades">
+        <div class="demo-grade-hero">
+          <div class="demo-grade-avg">82.4%</div>
+          <div class="demo-grade-letter">B+</div>
+          <div class="demo-grade-sub">Semester Average · Spring 2026</div>
+          <div class="demo-grade-trend">📈 +4.2% from last semester</div>
+        </div>
+        <div class="demo-charts-row">
+          <div class="demo-chart-card" style="flex:1.4">
+            <div class="demo-chart-title">📊 Per-Course Score Progression</div>
+            <canvas id="dBarChart" height="160"></canvas>
+          </div>
+          <div class="demo-chart-card" style="flex:1">
+            <div class="demo-chart-title">📉 ML Course — All Assessments</div>
+            <canvas id="dLineChart" height="160"></canvas>
+          </div>
+        </div>
+        <div class="demo-assess-list">
+          <div class="demo-section-title">Recent Assessments</div>
+          <div class="demo-assess-item">
+            <span class="demo-assess-badge type-exam">EXAM</span>
+            <div class="demo-assess-info"><div>Midterm Exam</div><div class="demo-assess-sub">CSE 4401 – Machine Learning</div></div>
+            <div class="demo-assess-score up">78/100 <span>📈</span></div>
+          </div>
+          <div class="demo-assess-item">
+            <span class="demo-assess-badge type-assignment">ASSIGN</span>
+            <div class="demo-assess-info"><div>Neural Network Implementation</div><div class="demo-assess-sub">CSE 4401 – Machine Learning</div></div>
+            <div class="demo-assess-score up">92/100 <span>📈</span></div>
+          </div>
+          <div class="demo-assess-item">
+            <span class="demo-assess-badge type-quiz">QUIZ</span>
+            <div class="demo-assess-info"><div>Chapter 4 Quiz</div><div class="demo-assess-sub">CSE 4301 – Computer Networks</div></div>
+            <div class="demo-assess-score down">14/20 <span>📉</span></div>
+          </div>
+          <div class="demo-assess-item">
+            <span class="demo-assess-badge type-presentation">PRESENT</span>
+            <div class="demo-assess-info"><div>Project Proposal Presentation</div><div class="demo-assess-sub">CSE 4201 – Software Engineering</div></div>
+            <div class="demo-assess-score up">18/20 <span>📈</span></div>
+          </div>
+          <div class="demo-assess-item">
+            <span class="demo-assess-badge type-classtest">CT</span>
+            <div class="demo-assess-info"><div>Class Test 2</div><div class="demo-assess-sub">MATH 3101 – Numerical Methods</div></div>
+            <div class="demo-assess-score down">11/20 <span>📉</span></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ── TODO TAB ── -->
+      <div class="demo-page" id="dtab-todo">
+        <div class="demo-todo-header">
+          <div class="demo-todo-stats">
+            <span class="demo-todo-pill done">18 Done</span>
+            <span class="demo-todo-pill pending">6 Pending</span>
+            <span class="demo-todo-pill high">2 Urgent</span>
+          </div>
+          <div class="demo-todo-progress">
+            <div class="demo-todo-bar"><div class="demo-todo-fill" style="width:75%"></div></div>
+            <span>75% complete today</span>
+          </div>
+        </div>
+        <div class="demo-todo-list">
+          <div class="demo-todo-item done">
+            <div class="demo-check checked">✓</div>
+            <div class="demo-todo-text"><span>Submit ML Assignment 3</span><span class="demo-tag high">High</span></div>
+            <div class="demo-todo-date">Mar 5</div>
+          </div>
+          <div class="demo-todo-item done">
+            <div class="demo-check checked">✓</div>
+            <div class="demo-todo-text"><span>Review lecture slides Ch.7</span><span class="demo-tag medium">Medium</span></div>
+            <div class="demo-todo-date">Mar 5</div>
+          </div>
+          <div class="demo-todo-item done">
+            <div class="demo-check checked">✓</div>
+            <div class="demo-todo-text"><span>Read Networks textbook pp.180-200</span><span class="demo-tag low">Low</span></div>
+            <div class="demo-todo-date">Mar 4</div>
+          </div>
+          <div class="demo-todo-item">
+            <div class="demo-check"></div>
+            <div class="demo-todo-text"><span>Prepare for CT3 – Compilers</span><span class="demo-tag high">High</span></div>
+            <div class="demo-todo-date">Mar 7</div>
+          </div>
+          <div class="demo-todo-item">
+            <div class="demo-check"></div>
+            <div class="demo-todo-text"><span>Finish SE project wireframes</span><span class="demo-tag medium">Medium</span></div>
+            <div class="demo-todo-date">Mar 8</div>
+          </div>
+          <div class="demo-todo-item">
+            <div class="demo-check"></div>
+            <div class="demo-todo-text"><span>Solve Numerical Methods worksheet</span><span class="demo-tag medium">Medium</span></div>
+            <div class="demo-todo-date">Mar 9</div>
+          </div>
+          <div class="demo-todo-item">
+            <div class="demo-check"></div>
+            <div class="demo-todo-text"><span>Study for ML Final — Part 1</span><span class="demo-tag high">High</span></div>
+            <div class="demo-todo-date">Mar 12</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ── PLANNER TAB ── -->
+      <div class="demo-page" id="dtab-planner">
+        <div class="demo-planner-hdr">
+          <div class="demo-planner-date">📅 Friday, March 6, 2026</div>
+          <div class="demo-planner-note">Focus: Networks lab + ML revision. Sleep by 11:30.</div>
+        </div>
+        <div class="demo-planner-list">
+          <div class="demo-plan-item done"><span class="demo-plan-check">✓</span><span>6:30 AM — Morning review of yesterday's notes</span><span class="demo-plan-time">30 min</span></div>
+          <div class="demo-plan-item done"><span class="demo-plan-check">✓</span><span>8:00 AM — Attend ML Lecture (Room 402)</span><span class="demo-plan-time">1 hr</span></div>
+          <div class="demo-plan-item done"><span class="demo-plan-check">✓</span><span>10:00 AM — Networks Lab Session</span><span class="demo-plan-time">2 hr</span></div>
+          <div class="demo-plan-item done"><span class="demo-plan-check">✓</span><span>12:30 PM — Lunch + short break</span><span class="demo-plan-time">45 min</span></div>
+          <div class="demo-plan-item">    <span class="demo-plan-check"></span><span>2:00 PM — Work on SE project wireframes</span><span class="demo-plan-time">2 hr</span></div>
+          <div class="demo-plan-item">    <span class="demo-plan-check"></span><span>4:30 PM — Compiler Design problem set</span><span class="demo-plan-time">1.5 hr</span></div>
+          <div class="demo-plan-item">    <span class="demo-plan-check"></span><span>7:00 PM — ML Chapter 8 reading</span><span class="demo-plan-time">1 hr</span></div>
+          <div class="demo-plan-item">    <span class="demo-plan-check"></span><span>9:00 PM — Review & plan tomorrow</span><span class="demo-plan-time">30 min</span></div>
+        </div>
+        <div class="demo-planner-progress">
+          <div class="demo-planner-bar"><div class="demo-planner-fill" style="width:50%"></div></div>
+          <span>4 / 8 tasks completed</span>
+        </div>
+      </div>
+
+      <!-- ── BOT TAB ── -->
+      <div class="demo-page" id="dtab-bot">
+        <div class="demo-bot-header">
+          <div class="demo-bot-avatar">🤖</div>
+          <div>
+            <div class="demo-bot-name">StudentLife Bot</div>
+            <div class="demo-bot-status">● Online · reads your real data</div>
+          </div>
+        </div>
+        <div class="demo-chat">
+          <div class="demo-msg bot"><div class="demo-bubble bot">Hey Abdul! 👋 You have <strong>2 urgent tasks</strong> due this week and a CT in Compilers on Mar 7. Want a study plan?</div></div>
+          <div class="demo-msg user"><div class="demo-bubble user">How are my grades?</div></div>
+          <div class="demo-msg bot"><div class="demo-bubble bot">📊 Your semester average is <strong>82.4% (B+)</strong>, up 4.2% from last semester!<br><br>Best: <strong>Software Engineering 89%</strong> 🏆<br>Needs work: <strong>Numerical Methods 68%</strong> ⚠️<br><br>You're on track for Dean's List if you score 85%+ in finals!</div></div>
+          <div class="demo-msg user"><div class="demo-bubble user">What should I study today?</div></div>
+          <div class="demo-msg bot"><div class="demo-bubble bot">Based on your planner for today:<br><br>📌 <strong>Priority 1</strong> — SE wireframes (due Mar 8)<br>📌 <strong>Priority 2</strong> — Compiler CT3 prep (Mar 7!)<br>📌 <strong>Priority 3</strong> — ML Chapter 8<br><br>You've already completed 4/8 tasks today. Great momentum! 🔥</div></div>
+          <div class="demo-msg user"><div class="demo-bubble user">Remind me of upcoming exams</div></div>
+          <div class="demo-msg bot"><div class="demo-bubble bot">⏰ Upcoming deadlines:<br><br>🔴 <strong>Mar 7</strong> — Compiler Design CT3<br>🟡 <strong>Mar 10</strong> — Networks Assignment due<br>🟡 <strong>Mar 14</strong> — ML Midterm 2<br>🟢 <strong>Mar 20</strong> — SE Project Demo<br><br>Want me to break down a study schedule for the ML midterm?</div></div>
+        </div>
+      </div>
+
+      <!-- Footer -->
+      <div class="demo-footer">
+        <span>👆 This is a live preview with sample data</span>
+        <a href="/signup" class="btn-demo-signup">Create your account — it's free →</a>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+  <script src="js/three-bg.js"></script>
+  <script src="js/auth.js"></script>
+  <script>
+  /* ===== DEMO MODAL LOGIC ===== */
+  function openDemo() {
+    document.getElementById('demoOverlay').classList.remove('hidden');
+    document.body.style.overflow = 'hidden';
+    setTimeout(initDemoCharts, 80);
+  }
+  function closeDemo() {
+    document.getElementById('demoOverlay').classList.add('hidden');
+    document.body.style.overflow = '';
+  }
+  function closeDemoOutside(e) {
+    if (e.target === document.getElementById('demoOverlay')) closeDemo();
+  }
+  function switchDemoTab(tab, btn) {
+    document.querySelectorAll('.demo-tab').forEach(t => t.classList.remove('active'));
+    document.querySelectorAll('.demo-page').forEach(p => p.classList.remove('active'));
+    btn.classList.add('active');
+    document.getElementById('dtab-' + tab).classList.add('active');
+    if (tab === 'grades') setTimeout(initGradeCharts, 60);
+  }
+
+  let chartsInit = false, gradeChartsInit = false;
+
+  function initDemoCharts() {
+    if (chartsInit) return; chartsInit = true;
+
+    /* Overall trend line */
+    new Chart(document.getElementById('dOverallChart'), {
+      type: 'line',
+      data: {
+        labels: ['Week 1','Week 2','Week 3','Week 4','Week 5','Week 6','Week 7','Week 8'],
+        datasets: [{
+          label: 'Average %',
+          data: [71, 74, 72, 78, 76, 81, 80, 82],
+          borderColor: '#6366f1',
+          backgroundColor: 'rgba(99,102,241,0.12)',
+          fill: true,
+          tension: 0.45,
+          pointBackgroundColor: '#818cf8',
+          pointRadius: 4,
+        }]
+      },
+      options: { responsive:true, plugins:{legend:{display:false}}, scales:{
+        x:{ticks:{color:'#94a3b8',font:{size:10}},grid:{color:'rgba(255,255,255,0.05)'}},
+        y:{ticks:{color:'#94a3b8',font:{size:10},callback:v=>v+'%'},grid:{color:'rgba(255,255,255,0.05)'},min:60,max:100}
+      }}
+    });
+
+    /* Donut */
+    new Chart(document.getElementById('dDonutChart'), {
+      type: 'doughnut',
+      data: {
+        labels: ['A (≥85)','B (70-84)','C (55-69)','Pending'],
+        datasets: [{
+          data: [28, 45, 17, 10],
+          backgroundColor: ['rgba(99,102,241,0.85)','rgba(6,182,212,0.85)','rgba(245,158,11,0.85)','rgba(71,85,105,0.5)'],
+          borderColor: 'transparent',
+          borderWidth: 3,
+        }]
+      },
+      options: { responsive:true, cutout:'68%', plugins:{legend:{labels:{color:'#94a3b8',font:{size:11},boxWidth:12}}} }
+    });
+  }
+
+  function initGradeCharts() {
+    if (gradeChartsInit) return; gradeChartsInit = true;
+
+    /* Bar — per course latest avg */
+    new Chart(document.getElementById('dBarChart'), {
+      type: 'bar',
+      data: {
+        labels: ['ML','Networks','SW Eng','Num Meth','Compilers'],
+        datasets: [{
+          label: 'Average %',
+          data: [82, 76, 89, 68, 74],
+          backgroundColor: ['rgba(99,102,241,0.8)','rgba(6,182,212,0.8)','rgba(244,114,182,0.8)','rgba(251,191,36,0.8)','rgba(52,211,153,0.8)'],
+          borderRadius: 8,
+          borderSkipped: false,
+        }]
+      },
+      options: { responsive:true, plugins:{legend:{display:false}}, scales:{
+        x:{ticks:{color:'#94a3b8'},grid:{display:false}},
+        y:{ticks:{color:'#94a3b8',callback:v=>v+'%'},grid:{color:'rgba(255,255,255,0.05)'},min:0,max:100}
+      }}
+    });
+
+    /* ML line — progression per assessment */
+    new Chart(document.getElementById('dLineChart'), {
+      type: 'line',
+      data: {
+        labels: ['CT1','Quiz1','Assign1','CT2','Quiz2','Assign2','Midterm','Assign3'],
+        datasets: [{
+          label: 'ML Score %',
+          data: [65, 70, 88, 72, 75, 92, 78, 92],
+          borderColor: '#6366f1',
+          backgroundColor: 'rgba(99,102,241,0.1)',
+          fill: true,
+          tension: 0.4,
+          pointBackgroundColor: v => v.raw >= 80 ? '#10b981' : '#ef4444',
+          pointRadius: 5,
+        }]
+      },
+      options: { responsive:true, plugins:{legend:{display:false}}, scales:{
+        x:{ticks:{color:'#94a3b8',font:{size:10}},grid:{color:'rgba(255,255,255,0.05)'}},
+        y:{ticks:{color:'#94a3b8',callback:v=>v+'%'},grid:{color:'rgba(255,255,255,0.05)'},min:50,max:100}
+      }}
+    });
+  }
+  </script>
+</body>
+</html>
