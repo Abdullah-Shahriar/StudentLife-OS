@@ -1638,7 +1638,7 @@ function processCBotMessage(msg) {
     return;
   }
   // Add course
-  if (/add.?course|new.?course/.test(m)) {
+  if (/add.+course|new.+course|add course/i.test(m)) {
     const nameMatch = msg.match(/(?:add|new).*?course\s+[\u201c\"']?([A-Za-z0-9 ]+)[\u201d\"']?/i);
     const name = nameMatch ? nameMatch[1].trim() : null;
     if (name && name.length > 1) {
