@@ -1,3 +1,5 @@
+require('dotenv').config({ path: require('path').resolve(__dirname, '../.env.local') });
+require('dotenv').config({ path: require('path').resolve(__dirname, '../.env') });
 const express  = require('express');
 const cors     = require('cors');
 const path     = require('path');
