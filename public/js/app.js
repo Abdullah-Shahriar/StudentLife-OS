@@ -1447,6 +1447,7 @@ init();
 let cbotHistory = [];
 let cbotAwaitingCourseSetup = null;
 let currentDistCourseId = null;
+let cbotPendingImage = null; // holds base64 data URL of a pasted/dropped screenshot
 
 function initCoursesBot() {
   const msgBox = document.getElementById('cbotMessages');
@@ -1495,6 +1496,18 @@ function cbotAppendButtons(options) {
     btn.innerHTML = opt.label.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
     btn.onclick = () => {
       wrap.remove();
+      // Handle image-to-course mapping
+      if (typeof opt.value === 'string' && opt.value.startsWith('__imgdist__')) {
+        const cid = opt.value.replace('__imgdist__', '');
+        cbotHistory.push({ role: 'user', text: opt.label });
+        const ud2 = document.createElement('div');
+        ud2.className = 'cbot-msg user';
+        ud2.innerHTML = `<div class="cbot-bubble">${escHtml(opt.label)}</div>`;
+        msgBox.appendChild(ud2);
+        msgBox.scrollTop = msgBox.scrollHeight;
+        cbotOpenDistWithImage(cid, cbotPendingImage || '');
+        return;
+      }
       // Handle special dist action
       if (typeof opt.value === 'string' && opt.value.startsWith('__dist__')) {
         const cid = opt.value.replace('__dist__', '');
@@ -1535,6 +1548,113 @@ function sendCBotMsg() {
   cbotAppendMsg('user', text);
   if (cbotAwaitingCourseSetup) { handleCbotSetupStep(text); return; }
   processCBotMessage(text);
+}
+
+/* ── chatbot image paste / drag-drop ── */
+function initCbotImageHandlers() {
+  const chatPane = document.getElementById('cbot-pane-chat');
+  const textarea = document.getElementById('cbotInput');
+  if (!chatPane || !textarea) return;
+
+  // Guard: only attach once
+  if (chatPane.dataset.imgHandlersAttached) return;
+  chatPane.dataset.imgHandlersAttached = '1';
+
+  // Paste image from clipboard (Ctrl+V while chatbot is visible)
+  textarea.addEventListener('paste', (e) => {
+    const items = (e.clipboardData || e.originalEvent?.clipboardData)?.items;
+    if (!items) return;
+    for (const item of items) {
+      if (item.type.startsWith('image/')) {
+        e.preventDefault();
+        const blob = item.getAsFile();
+        const reader = new FileReader();
+        reader.onload = ev => cbotHandleImage(ev.target.result);
+        reader.readAsDataURL(blob);
+        return;
+      }
+    }
+  });
+
+  // Drag image over chatbot pane
+  chatPane.addEventListener('dragover', (e) => {
+    if ([...e.dataTransfer.types].includes('Files')) {
+      e.preventDefault();
+      chatPane.classList.add('drag-over');
+    }
+  });
+  chatPane.addEventListener('dragleave', (e) => {
+    if (!chatPane.contains(e.relatedTarget)) chatPane.classList.remove('drag-over');
+  });
+  chatPane.addEventListener('drop', (e) => {
+    chatPane.classList.remove('drag-over');
+    const file = e.dataTransfer.files?.[0];
+    if (file && file.type.startsWith('image/')) {
+      e.preventDefault();
+      const reader = new FileReader();
+      reader.onload = ev => cbotHandleImage(ev.target.result);
+      reader.readAsDataURL(file);
+    }
+  });
+}
+
+function cbotHandleImage(dataUrl) {
+  cbotPendingImage = dataUrl;
+  const msgBox = document.getElementById('cbotMessages');
+  if (!msgBox) return;
+
+  // Show as user image bubble
+  cbotHistory.push({ role: 'user', text: '[Distribution screenshot]' });
+  const div = document.createElement('div');
+  div.className = 'cbot-msg user';
+  div.innerHTML =
+    `<div class="cbot-bubble cbot-img-bubble">` +
+    `<img src="${dataUrl}" alt="Distribution sheet" onclick="this.requestFullscreen?.()" />` +
+    `<span>📷 Distribution screenshot</span>` +
+    `</div>`;
+  msgBox.appendChild(div);
+  msgBox.scrollTop = msgBox.scrollHeight;
+
+  const courses = academicData?.courses || [];
+  if (!courses.length) {
+    cbotAppendMsg('bot', `📚 You don't have any courses yet! Add one first, then paste your distribution sheet again.`);
+    cbotPendingImage = null;
+    return;
+  }
+  if (courses.length === 1) {
+    cbotOpenDistWithImage(courses[0].id, dataUrl);
+    return;
+  }
+  cbotAppendMsg('bot', `📊 Got your distribution sheet! Which course is this for?`);
+  cbotAppendButtons(courses.map(c => ({
+    label: c.name,
+    value: `__imgdist__${c.id}`,
+    cls: 'credit-btn'
+  })));
+}
+
+function cbotOpenDistWithImage(courseId, dataUrl) {
+  const course = (academicData?.courses || []).find(c => c.id === courseId);
+  if (!course) return;
+  cbotAppendMsg('bot',
+    `📋 Opening distribution for **${escHtml(course.name)}** — your screenshot is pinned at the top of the panel. ` +
+    `Fill in the weights below while referencing it!`);
+  openDistModal(courseId);
+  setTimeout(() => {
+    const preview = document.getElementById('distFilePreview');
+    const area    = document.getElementById('distUploadArea');
+    if (preview && dataUrl) {
+      preview.style.display = 'block';
+      preview.innerHTML =
+        `<div class="dist-ref-panel">` +
+        `<div class="dist-ref-label">📷 Your distribution screenshot</div>` +
+        `<img src="${dataUrl}" class="dist-ref-img" alt="Distribution sheet" onclick="this.requestFullscreen?.()" title="Click to expand" />` +
+        `<div class="dist-ref-hint">Use this table as a reference while setting up the weights below</div>` +
+        `</div>`;
+    }
+    if (area) area.innerHTML = `<div style="color:var(--success);font-size:13px;">✓ Screenshot loaded from chat — click to replace</div>`;
+    cbotPendingImage = null;
+  }, 180);
 }
 
 function handleCbotSetupStep(text) {
@@ -1849,9 +1969,47 @@ function openDistModal(courseId) {
 
   // Reset file preview
   const fp = document.getElementById('distFilePreview'); if(fp){fp.style.display='none';fp.innerHTML='';}
-  document.getElementById('distUploadArea').innerHTML = `<svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg><p>Upload your course syllabus or marks breakdown</p><span>Click to browse — image or PDF</span>`;
+  document.getElementById('distUploadArea').innerHTML = `<svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg><p>Upload or drag & drop your syllabus/screenshot</p><span>Click to browse · or paste (Ctrl+V) while this panel is open</span>`;
 
   openModal('distModal');
+
+  // Attach drag-drop + paste to the upload area (once)
+  const uploadArea = document.getElementById('distUploadArea');
+  if (uploadArea && !uploadArea.dataset.dndAttached) {
+    uploadArea.dataset.dndAttached = '1';
+    uploadArea.addEventListener('dragover', (e) => {
+      if ([...e.dataTransfer.types].includes('Files')) { e.preventDefault(); uploadArea.classList.add('drag-over'); }
+    });
+    uploadArea.addEventListener('dragleave', () => uploadArea.classList.remove('drag-over'));
+    uploadArea.addEventListener('drop', (e) => {
+      uploadArea.classList.remove('drag-over');
+      const file = e.dataTransfer.files?.[0];
+      if (file && file.type.startsWith('image/')) {
+        e.preventDefault();
+        const fakeEvt = { target: { files: [file] } };
+        handleDistUpload(fakeEvt);
+      }
+    });
+  }
+  // Paste image while dist modal is open
+  const distModal = document.getElementById('distModal');
+  if (distModal && !distModal.dataset.pasteAttached) {
+    distModal.dataset.pasteAttached = '1';
+    document.addEventListener('paste', (e) => {
+      if (distModal.classList.contains('hidden')) return;
+      const items = (e.clipboardData || e.originalEvent?.clipboardData)?.items;
+      if (!items) return;
+      for (const item of items) {
+        if (item.type.startsWith('image/')) {
+          e.preventDefault();
+          const blob = item.getAsFile();
+          const fakeEvt = { target: { files: [blob] } };
+          handleDistUpload(fakeEvt);
+          return;
+        }
+      }
+    });
+  }
 }
 
 function openDistModalForCourse() {

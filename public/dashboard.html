@@ -354,8 +354,9 @@
             <button onclick="cbotQuick('what score do i need')">Score Needed</button>
             <button onclick="cbotQuick('setup marks distribution')">Setup Marks</button>
           </div>
+          <div class="cbot-paste-hint">📷 Paste (Ctrl+V) or drag &amp; drop a screenshot to auto-load distribution</div>
           <div class="cbot-input-row">
-            <textarea id="cbotInput" placeholder="Ask about scores, CGPA, targets…" rows="2" onkeydown="handleCBotKey(event)"></textarea>
+            <textarea id="cbotInput" placeholder="Ask about scores, CGPA… or paste a screenshot!" rows="2" onkeydown="handleCBotKey(event)"></textarea>
             <button class="cbot-send" onclick="sendCBotMsg()">
               <svg viewBox="0 0 24 24"><path d="M22 2L11 13"/><path d="M22 2L15 22 11 13 2 9l20-7z"/></svg>
             </button>
@@ -884,7 +885,7 @@
 
       <!-- Screenshot upload -->
       <div class="form-group">
-        <label>Distribution Sheet (optional image / PDF)</label>
+        <label>Distribution Sheet — drag, drop or paste (Ctrl+V) an image</label>
         <div class="dist-upload-area" id="distUploadArea" onclick="document.getElementById('distFileInput').click()">
           <svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
           <p>Upload your course syllabus or marks breakdown</p>

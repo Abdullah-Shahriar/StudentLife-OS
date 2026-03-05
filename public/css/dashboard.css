@@ -971,6 +971,8 @@ select { cursor: pointer; }
 .cbot-tab.active { color: var(--primary-light); border-bottom-color: var(--primary); }
 .cbot-pane { flex: 1; display: none; flex-direction: column; overflow: hidden; min-height: 0; }
 .cbot-pane.active { display: flex; }
+/* drag-over highlight when an image file is dragged over the chatbot */
+.cbot-pane.drag-over { outline: 2px dashed var(--primary); outline-offset: -5px; background: rgba(99,102,241,0.05); }
 
 /* ── bot chat pane ── */
 .cbot-messages {
@@ -990,6 +992,12 @@ select { cursor: pointer; }
   background: linear-gradient(135deg, var(--primary), var(--secondary));
   color: white; border-radius: 14px 14px 4px 14px;
 }
+/* image bubble inside chat */
+.cbot-img-bubble { padding: 6px !important; background: rgba(99,102,241,0.13) !important; border: 1px solid rgba(99,102,241,0.3) !important; }
+.cbot-img-bubble img { display: block; max-width: 190px; max-height: 160px; border-radius: 8px; object-fit: contain; cursor: pointer; }
+.cbot-img-bubble span { display: block; font-size: 11px; color: var(--text-muted); margin-top: 5px; text-align: center; }
+/* paste/drag hint row */
+.cbot-paste-hint { font-size: 11px; color: var(--text-faint); text-align: center; padding: 4px 12px 2px; flex-shrink: 0; }
 .cbot-quick-actions {
   display: flex; gap: 5px; padding: 7px 12px;
   flex-wrap: wrap; border-top: 1px solid var(--border-soft); flex-shrink: 0;
@@ -1155,6 +1163,13 @@ select { cursor: pointer; }
 .dist-status        { font-size: 12px; font-weight: 600; }
 .dist-status.ok     { color: var(--success); }
 .dist-status.err    { color: var(--danger); }
+/* distribution modal screenshot reference panel */
+.dist-ref-panel { border-radius: 8px; overflow: hidden; border: 1px solid rgba(99,102,241,0.25); background: rgba(99,102,241,0.05); margin-bottom: 2px; }
+.dist-ref-label { font-size: 11px; font-weight: 700; color: var(--primary-light); padding: 6px 10px; background: rgba(99,102,241,0.1); text-transform: uppercase; letter-spacing: 0.5px; display: flex; align-items: center; gap: 5px; }
+.dist-ref-img { display: block; width: 100%; max-height: 280px; object-fit: contain; padding: 8px; cursor: zoom-in; }
+.dist-ref-hint { font-size: 11px; color: var(--text-muted); padding: 6px 10px 8px; border-top: 1px solid rgba(99,102,241,0.12); }
+/* upload area drag-over state */
+.dist-upload-area.drag-over { border-color: var(--primary); background: rgba(99,102,241,0.08); color: var(--text); }
 
 /* ── course target badge on cards ── */
 .course-target-badge {
