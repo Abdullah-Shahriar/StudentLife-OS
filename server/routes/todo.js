@@ -1,77 +1,71 @@
-const express = require('express');
-const router = express.Router();
-const fs = require('fs-extra');
-const path = require('path');
+const express  = require('express');
+const router   = express.Router();
 const { v4: uuidv4 } = require('uuid');
-const { auth, getUserDir } = require('./auth');
-
-function getTodos(email) {
-  const f = path.join(getUserDir(email), 'todos.json');
-  return fs.readJsonSync(f, { throws: false }) || [];
-}
-function saveTodos(email, data) {
-  fs.writeJsonSync(path.join(getUserDir(email), 'todos.json'), data, { spaces: 2 });
-}
-function getDayPlans(email) {
-  const f = path.join(getUserDir(email), 'dayplans.json');
-  return fs.readJsonSync(f, { throws: false }) || {};
-}
-function saveDayPlans(email, data) {
-  fs.writeJsonSync(path.join(getUserDir(email), 'dayplans.json'), data, { spaces: 2 });
-}
+const UserData = require('../models/UserData');
+const { auth } = require('./auth');
 
 // GET all todos
-router.get('/', auth, (req, res) => {
-  res.json(getTodos(req.user.email));
+router.get('/', auth, async (req, res) => {
+  try {
+    const ud = await UserData.findOne({ email: req.user.email });
+    res.json(ud?.todos || []);
+  } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
 // ADD todo
-router.post('/', auth, (req, res) => {
-  const { text, date, priority, category } = req.body;
-  const todos = getTodos(req.user.email);
-  const todo = {
-    id: uuidv4(), text,
-    date: date || new Date().toISOString().split('T')[0],
-    priority: priority || 'medium',
-    category: category || 'general',
-    completed: false,
-    createdAt: new Date().toISOString()
-  };
-  todos.push(todo);
-  saveTodos(req.user.email, todos);
-  res.json(todo);
+router.post('/', auth, async (req, res) => {
+  try {
+    const { text, date, priority, category } = req.body;
+    const todo = {
+      id: uuidv4(), text,
+      date: date || new Date().toISOString().split('T')[0],
+      priority: priority || 'medium', category: category || 'general',
+      completed: false, createdAt: new Date().toISOString()
+    };
+    await UserData.findOneAndUpdate({ email: req.user.email }, { $push: { todos: todo } }, { upsert: true });
+    res.json(todo);
+  } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
-// UPDATE todo (toggle complete or edit)
-router.put('/:id', auth, (req, res) => {
-  const todos = getTodos(req.user.email);
-  const idx = todos.findIndex(t => t.id === req.params.id);
-  if (idx === -1) return res.status(404).json({ error: 'Not found' });
-  todos[idx] = { ...todos[idx], ...req.body, updatedAt: new Date().toISOString() };
-  saveTodos(req.user.email, todos);
-  res.json(todos[idx]);
+// UPDATE todo
+router.put('/:id', auth, async (req, res) => {
+  try {
+    const ud   = await UserData.findOne({ email: req.user.email });
+    const todo = ud?.todos?.find(t => t.id === req.params.id);
+    if (!todo) return res.status(404).json({ error: 'Not found' });
+    Object.assign(todo, req.body, { updatedAt: new Date().toISOString() });
+    await ud.save();
+    res.json(todo);
+  } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
 // DELETE todo
-router.delete('/:id', auth, (req, res) => {
-  let todos = getTodos(req.user.email);
-  todos = todos.filter(t => t.id !== req.params.id);
-  saveTodos(req.user.email, todos);
-  res.json({ success: true });
+router.delete('/:id', auth, async (req, res) => {
+  try {
+    await UserData.findOneAndUpdate({ email: req.user.email }, { $pull: { todos: { id: req.params.id } } });
+    res.json({ success: true });
+  } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
-// DAY PLAN: get plan for a date
-router.get('/dayplan/:date', auth, (req, res) => {
-  const plans = getDayPlans(req.user.email);
-  res.json(plans[req.params.date] || { tasks: [], note: '' });
+// GET day plan
+router.get('/dayplan/:date', auth, async (req, res) => {
+  try {
+    const ud = await UserData.findOne({ email: req.user.email });
+    const plan = ud?.dayplans?.get(req.params.date) || { tasks: [], note: '' };
+    res.json(plan);
+  } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
-// DAY PLAN: save plan for a date
-router.post('/dayplan/:date', auth, (req, res) => {
-  const plans = getDayPlans(req.user.email);
-  plans[req.params.date] = req.body;
-  saveDayPlans(req.user.email, plans);
-  res.json({ success: true });
+// SAVE day plan
+router.post('/dayplan/:date', auth, async (req, res) => {
+  try {
+    await UserData.findOneAndUpdate(
+      { email: req.user.email },
+      { $set: { ['dayplans.' + req.params.date]: req.body } },
+      { upsert: true }
+    );
+    res.json({ success: true });
+  } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
 module.exports = router;
