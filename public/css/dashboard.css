@@ -309,8 +309,12 @@ body.light-mode .theme-icon.sun  { opacity: 1; transform: translateX(37px) rotat
 /* =================================================================
    LAYOUT
    ================================================================= */
+/* ── prevent text selection / copy everywhere ── */
+*, *::before, *::after { -webkit-user-select: none; user-select: none; }
+input, textarea, [contenteditable] { -webkit-user-select: text; user-select: text; }
+
 .dashboard-page {
-  display: flex; min-height: 100vh;
+  display: flex; height: 100vh; overflow: hidden;
   background:
     radial-gradient(ellipse 80% 55% at 5% 20%, rgba(99,102,241,0.09) 0%, transparent 55%),
     radial-gradient(ellipse 60% 45% at 95% 80%, rgba(6,182,212,0.06) 0%, transparent 55%),
@@ -996,6 +1000,37 @@ select { cursor: pointer; }
 .cbot-quick-actions button:hover {
   background: rgba(99,102,241,0.12); border-color: var(--primary); color: var(--primary-light);
 }
+/* ── chatbot interactive option buttons ── */
+.cbot-option-row {
+  display: flex; flex-wrap: wrap; gap: 6px;
+  padding: 4px 10px 10px 10px;
+  align-self: flex-start;
+  max-width: 100%;
+}
+.cbot-option-btn {
+  background: rgba(99,102,241,0.1);
+  border: 1px solid rgba(99,102,241,0.32);
+  color: var(--primary-light);
+  border-radius: 20px;
+  padding: 6px 14px;
+  font-size: 11.5px; font-weight: 600;
+  cursor: pointer;
+  transition: all 0.18s ease;
+  white-space: nowrap;
+  -webkit-user-select: none; user-select: none;
+}
+.cbot-option-btn:hover {
+  background: rgba(99,102,241,0.22);
+  border-color: var(--primary);
+  color: #fff;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 14px rgba(99,102,241,0.28);
+}
+.cbot-option-btn.credit-btn { border-color: rgba(6,182,212,0.35); color: var(--secondary); background: rgba(6,182,212,0.08); }
+.cbot-option-btn.credit-btn:hover { background: rgba(6,182,212,0.2); border-color: var(--secondary); color: #fff; box-shadow: 0 4px 14px rgba(6,182,212,0.25); }
+.cbot-option-btn.grade-btn  { border-color: rgba(16,185,129,0.35); color: var(--success);   background: rgba(16,185,129,0.08); }
+.cbot-option-btn.grade-btn:hover  { background: rgba(16,185,129,0.2); border-color: var(--success); color: #fff; box-shadow: 0 4px 14px rgba(16,185,129,0.25); }
+
 .cbot-input-row {
   display: flex; gap: 8px; padding: 9px 12px;
   border-top: 1px solid var(--border-soft); flex-shrink: 0; align-items: flex-end;

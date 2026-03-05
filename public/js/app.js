@@ -3,6 +3,15 @@
    Master dashboard controller
    ================================================ */
 
+// ── PREVENT COPY / SELECT / RIGHT-CLICK ──
+document.addEventListener('contextmenu', e => e.preventDefault());
+document.addEventListener('copy',        e => e.preventDefault());
+document.addEventListener('cut',         e => e.preventDefault());
+document.addEventListener('keydown', e => {
+  if ((e.ctrlKey || e.metaKey) && ['c','x','a','u','s'].includes(e.key.toLowerCase())) e.preventDefault();
+  if (e.key === 'F12') e.preventDefault();
+});
+
 // ── AUTH GLOBALS ──
 const TOKEN = localStorage.getItem('sl_token');
 const USER = JSON.parse(localStorage.getItem('sl_user') || 'null');
@@ -1471,6 +1480,52 @@ function cbotAppendMsg(role, text) {
 function handleCBotKey(e) { if (e.key==='Enter' && !e.shiftKey) { e.preventDefault(); sendCBotMsg(); } }
 function cbotQuick(text)   { const i=document.getElementById('cbotInput'); if(i){i.value=text;} sendCBotMsg(); }
 
+/* Render clickable option-buttons below the last bot message */
+function cbotAppendButtons(options) {
+  const msgBox = document.getElementById('cbotMessages');
+  if (!msgBox) return;
+  // remove any existing option row first
+  document.getElementById('cbotOptionRow')?.remove();
+  const wrap = document.createElement('div');
+  wrap.className = 'cbot-option-row';
+  wrap.id = 'cbotOptionRow';
+  options.forEach(opt => {
+    const btn = document.createElement('button');
+    btn.className = `cbot-option-btn ${opt.cls || ''}`;
+    btn.innerHTML = opt.label.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+    btn.onclick = () => {
+      wrap.remove();
+      // Handle special dist action
+      if (typeof opt.value === 'string' && opt.value.startsWith('__dist__')) {
+        const cid = opt.value.replace('__dist__', '');
+        cbotHistory.push({ role: 'user', text: 'Setup Marks Distribution' });
+        const d2 = document.createElement('div');
+        d2.className = 'cbot-msg user';
+        d2.innerHTML = `<div class="cbot-bubble">Setup Marks Distribution</div>`;
+        msgBox.appendChild(d2);
+        msgBox.scrollTop = msgBox.scrollHeight;
+        openDistModal(cid);
+        cbotAppendMsg('bot', `📝 Distribution modal opened! You can **drag & drop** or upload an image of your syllabus, then fill in the weights below it.`);
+        return;
+      }
+      // Regular option — feed as user message into step handler
+      const displayLabel = opt.label.split('—')[0].trim();
+      cbotHistory.push({ role: 'user', text: displayLabel });
+      const ud = document.createElement('div');
+      ud.className = 'cbot-msg user';
+      ud.innerHTML = `<div class="cbot-bubble">${escHtml(displayLabel)}</div>`;
+      msgBox.appendChild(ud);
+      msgBox.scrollTop = msgBox.scrollHeight;
+      if (cbotAwaitingCourseSetup) {
+        handleCbotSetupStep(String(opt.value !== undefined ? opt.value : opt.label));
+      }
+    };
+    wrap.appendChild(btn);
+  });
+  msgBox.appendChild(wrap);
+  msgBox.scrollTop = msgBox.scrollHeight;
+}
+
 function sendCBotMsg() {
   const inp = document.getElementById('cbotInput');
   if (!inp) return;
@@ -1486,14 +1541,37 @@ function handleCbotSetupStep(text) {
   const state = cbotAwaitingCourseSetup;
   if (state.step === 'name') {
     state.data.name = text; state.step = 'credits';
-    cbotAppendMsg('bot', `Great! **"${escHtml(text)}"** it is.\n\nHow many credit hours? (1–6)`);
+    cbotAppendMsg('bot', `Great! **"${escHtml(text)}"** — how many credit hours?`);
+    cbotAppendButtons([
+      { label: '1 Credit',    value: '1',   cls: 'credit-btn' },
+      { label: '1.5 Credits', value: '1.5', cls: 'credit-btn' },
+      { label: '2 Credits',   value: '2',   cls: 'credit-btn' },
+      { label: '3 Credits',   value: '3',   cls: 'credit-btn' },
+      { label: '4 Credits',   value: '4',   cls: 'credit-btn' },
+    ]);
     return;
   }
   if (state.step === 'credits') {
-    const cr = parseInt(text);
-    if (isNaN(cr)||cr<1||cr>6) { cbotAppendMsg('bot','Please enter a valid credit count (1–6):'); return; }
+    const cr = parseFloat(text);
+    if (isNaN(cr) || cr < 0.5 || cr > 6) {
+      cbotAppendMsg('bot', 'Please pick a valid credit value:');
+      cbotAppendButtons([
+        { label: '1 Credit',  value: '1', cls: 'credit-btn' },
+        { label: '2 Credits', value: '2', cls: 'credit-btn' },
+        { label: '3 Credits', value: '3', cls: 'credit-btn' },
+      ]);
+      return;
+    }
     state.data.credits = cr; state.step = 'targetGP';
-    cbotAppendMsg('bot', `${cr} credits noted! What’s your **target grade point**?\n\nExamples: **4.00** (A), **3.67** (A-), **3.33** (B+), **3.00** (B)\nType a GP or letter grade like “B+”`);
+    cbotAppendMsg('bot', `**${cr}** credit${cr === 1 ? '' : 's'} noted! 🎯 What’s your **target grade**?`);
+    cbotAppendButtons([
+      { label: 'A  — 4.00', value: '4.00', cls: 'grade-btn' },
+      { label: 'A− — 3.67', value: '3.67', cls: 'grade-btn' },
+      { label: 'B+ — 3.33', value: '3.33', cls: 'grade-btn' },
+      { label: 'B  — 3.00', value: '3.00', cls: 'grade-btn' },
+      { label: 'B− — 2.67', value: '2.67', cls: 'grade-btn' },
+      { label: 'C+ — 2.33', value: '2.33', cls: 'grade-btn' },
+    ]);
     return;
   }
   if (state.step === 'targetGP') {
@@ -1502,35 +1580,37 @@ function handleCbotSetupStep(text) {
     if (lm) { gp = lm.gp; } else {
       const n = parseFloat(text);
       if (!isNaN(n) && n >= 0 && n <= 4) {
-        gp = GRADE_SCALE.reduce((b,g) => Math.abs(g.gp-n)<Math.abs(b.gp-n)?g:b).gp;
+        gp = GRADE_SCALE.reduce((b, g) => Math.abs(g.gp - n) < Math.abs(b.gp - n) ? g : b).gp;
       }
     }
-    if (gp === null) { cbotAppendMsg('bot','Enter a grade point like 3.33 or a letter like B+:'); return; }
+    if (gp === null) {
+      cbotAppendMsg('bot', 'Pick a target grade:');
+      cbotAppendButtons([
+        { label: 'A  — 4.00', value: '4.00', cls: 'grade-btn' },
+        { label: 'A− — 3.67', value: '3.67', cls: 'grade-btn' },
+        { label: 'B+ — 3.33', value: '3.33', cls: 'grade-btn' },
+        { label: 'B  — 3.00', value: '3.00', cls: 'grade-btn' },
+      ]);
+      return;
+    }
     state.data.targetGP = gp;
-    const grade = GRADE_SCALE.find(g=>g.gp===gp);
-    state.step = 'code';
-    cbotAppendMsg('bot', `Target: **${grade?.letter} (${gp.toFixed(2)})** — ${grade?.label}! 🎯\n\nCourse code? (e.g. CSE301) or type **skip**`);
-    return;
-  }
-  if (state.step === 'code') {
-    state.data.code = text.toLowerCase()==='skip'?'':text.toUpperCase();
-    state.step = 'instructor';
-    cbotAppendMsg('bot', `Got it! Instructor name? (or type **skip**)`);
-    return;
-  }
-  if (state.step === 'instructor') {
-    state.data.instructor = text.toLowerCase()==='skip'?'':text;
+    const grade = GRADE_SCALE.find(g => g.gp === gp);
     cbotAwaitingCourseSetup = null;
     const d = state.data;
-    cbotAppendMsg('bot', `Creating **"${escHtml(d.name)}"** (⌛️ one moment…)`);
-    api('POST','/academic/course',{name:d.name,code:d.code,instructor:d.instructor,credits:d.credits})
-      .then(course => api('PUT',`/academic/course/${course.id}`,{targetGP:d.targetGP}))
-      .then(() => {
+    cbotAppendMsg('bot', `Target **${grade?.letter} (${gp.toFixed(2)})** — ${grade?.label}! ⏳ Creating course…`);
+    api('POST', '/academic/course', { name: d.name, code: '', instructor: '', credits: d.credits })
+      .then(course => api('PUT', `/academic/course/${course.id}`, { targetGP: gp }).then(() => course))
+      .then(course => {
         loadCourses();
-        const grade = GRADE_SCALE.find(g=>g.gp===d.targetGP);
-        cbotAppendMsg('bot', `✅ **"${escHtml(d.name)}"** added!\nTarget: **${grade?.letter}** (${d.targetGP.toFixed(2)}) — ${grade?.label}\n\nNow say **“setup distribution for ${escHtml(d.name)}”** so I can track weighted progress accurately!`);
+        cbotAppendMsg('bot',
+          `✅ **"${escHtml(d.name)}"** added — ${d.credits} credit${d.credits === 1 ? '' : 's'}, target **${grade?.letter}**!\n\n` +
+          `📝 **Next step**: Set up your marks distribution so I can track weighted progress.\n` +
+          `Upload a screenshot of your syllabus or fill it in manually!`);
+        cbotAppendButtons([
+          { label: '📊 Setup Marks Distribution', value: `__dist__${course.id}`, cls: 'grade-btn' },
+        ]);
       })
-      .catch(err => cbotAppendMsg('bot',`❌ Error: ${err.message}`));
+      .catch(err => cbotAppendMsg('bot', `❌ Error: ${err.message}`));
     return;
   }
 }
@@ -1563,7 +1643,14 @@ function processCBotMessage(msg) {
     const name = nameMatch ? nameMatch[1].trim() : null;
     if (name && name.length > 1) {
       cbotAwaitingCourseSetup = { step:'credits', data:{ name } };
-      cbotAppendMsg('bot', `Adding **"${escHtml(name)}"**!\n\nHow many credit hours? (1–6)`);
+      cbotAppendMsg('bot', `Adding **"${escHtml(name)}"**! How many credit hours?`);
+      cbotAppendButtons([
+        { label: '1 Credit',    value: '1',   cls: 'credit-btn' },
+        { label: '1.5 Credits', value: '1.5', cls: 'credit-btn' },
+        { label: '2 Credits',   value: '2',   cls: 'credit-btn' },
+        { label: '3 Credits',   value: '3',   cls: 'credit-btn' },
+        { label: '4 Credits',   value: '4',   cls: 'credit-btn' },
+      ])
     } else {
       cbotAwaitingCourseSetup = { step:'name', data:{} };
       cbotAppendMsg('bot', `Sure! What’s the **course name**?`);

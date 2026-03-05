@@ -8,6 +8,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Space+Grotesk:wght@400;600;700&display=swap" rel="stylesheet" />
   <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+  <script>/* no-copy */document.addEventListener('contextmenu',e=>e.preventDefault());document.addEventListener('copy',e=>e.preventDefault());document.addEventListener('cut',e=>e.preventDefault());document.addEventListener('keydown',e=>{if((e.ctrlKey||e.metaKey)&&['c','x','a','u','s'].includes(e.key.toLowerCase()))e.preventDefault();});</script>
 </head>
 <body class="auth-page">
   <!-- Three.js galaxy background -->
@@ -132,9 +133,13 @@
       <div class="signin-success hidden" id="signInSuccess">
         <div class="ss-ring r1"></div>
         <div class="ss-ring r2"></div>
+        <div class="ss-ring r3"></div>
         <div class="ss-check">✓</div>
-        <div class="ss-title">Access Granted</div>
-        <div class="ss-sub">Loading your command center…</div>
+        <div class="ss-badge">IDENTITY VERIFIED</div>
+        <div class="ss-title">ACCESS GRANTED</div>
+        <div class="ss-sub">Initialising command center…</div>
+        <div class="ss-progress-wrap"><div class="ss-progress-bar"></div></div>
+        <div class="ss-status-line"><span class="ss-cursor">▋</span>&nbsp;AUTH_TOKEN: OK · REDIRECTING</div>
       </div>
     </div><!-- /.futura-card -->
 
